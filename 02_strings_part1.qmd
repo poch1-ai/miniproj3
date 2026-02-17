@@ -264,9 +264,9 @@ str_extract() is more interesting when we want to identify a particular *pattern
 For instance:
 
 ```{r}
-str_extract("find first vowel", "[aeiou]")
+str_extract("find first vowel", "[aeiou]") # find the first vowel
 
-str_extract("any numb3rs?", "\\d")
+str_extract("any numb3rs?", "\\d") #find the degit 
 
 numbers_here <- c("numb3rs", "ar3", "h1d1ing", "almost", "ev3ryw4ere")
 
