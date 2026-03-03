@@ -1,0 +1,209 @@
+---
+title: "Mini-Project 1: Text Analysis"
+subtitle: "Signaling the Business Cycle: How FOMC Communication Shifted Before and After COVID-19”
+format:
+  html: default
+editor_options: 
+  chunk_output_type: console
+---
+
+## Overview
+
+You will find a data set containing string data.  This could be newspaper articles, tweets, songs, plays, movie reviews, or anything else you can imagine.  Then you will answer questions of interest and tell a story about your data using skills you have developed in strings, regular expressions, and text analysis.
+
+Your story should be 3-5 pages once rendered to a pdf (but could be longer, try to keep it under 7), this is including reasonably sized plots and tables. Think of this like a blog post or article you're writing. Introduce the data and what you want to explore, then walk the reader (me) through your analysis and thought process. Be sure to highlight interesting insights along the way, then wrap up with some of your key findings.
+
+Your analysis must contain the following elements:
+
+- *at least* 3 different str_ functions
+- *at least* 3 different regular expressions
+- *at least* 2 different text analysis applications (count words, bing sentiment, afinn sentiment, nrc sentiment, wordclouds, trajectories over sections or time, tf-idf, bigrams, correlations, networks, LDA, etc.).  Note that many interesting insights can be gained by strategic and thoughtful use of regular expressions paired with simple counts and summary statistics.
+- *at least* 3 illustrative, well-labeled plots or tables, one of which is described with alt-text using the [Four Ingredients Model](https://drive.google.com/file/d/1BuEbL6vETBcFULmtlrwwZBUYhdEg0Zqb/view)
+- a description of what insights can be gained from your plots and tables.  *Be sure you weave a compelling and interesting story!*
+
+Be sure to highlight the elements above so that they are easy for me to spot!  
+
+You will hand in this project by pushing your work (qmd file, data set(s), and rendered pdf) to GitHub and providing me with a link submitted on Moodle.  If you have a private repository, you might have to add me (joeroith) as a collaborator.
+
+
+## Evaluation Rubric
+
+Available [here](https://drive.google.com/file/d/1QhoyZSA0wm_WnwY1DEDOfCtWXhTaTSty/view?usp=sharing).
+
+
+## Timeline
+
+Mini-Project 1 must be submitted on Moodle by **11:00 PM on Wed Mar 4**.   
+
+You should have the following in your GitHub repo:
+
+$\Box$ the dataset you used as .csv or .txt file (even if your data is from an R package save a version of it as a csv, you can use the `write_csv()` function or see me for help doing this)
+
+$\Box$ clearly named qmd file with all code, well commented
+
+$\Box$ Rendered pdf, with a title and author at the top, you should suppress all messages and warnings, but you may have code visible in the pdf.
+
+
+```{r}
+library(readr)
+library(tidyverse)
+library(lubridate)
+library(stringr)
+library(readr)
+mini_project <- read_csv("miniproject_sds264/mini project.csv")
+View(mini_project)
+```
+
+## Topic Ideas
+
+Topic overview:
+Section 1 — Business Cycle Signal
+Section 2 — Risk/Uncertainty Communication
+Section 3 — Sentiment Tone
+
+```{r}
+#| include: false
+#| message: false
+
+library(lubridate)
+library(tidyverse)
+```
+
+```{r}
+fed <- mini_project |>
+  rename(
+    date = `Date`,
+    year = `Year`,
+    month = `Month`,
+    text = `Text`
+  )
+```
+
+```{r}
+ fed2 <-fed |>
+  mutate(
+    date = mdy(date),
+    year = as.integer(year),
+    month = str_squish(month),
+    period = case_when(
+      year <= 2019 ~ "Pre-COVID",
+      year == 2020 ~ "COVID Shock",
+      year >= 2021 ~ "Post-COVID"
+    ),
+    text_clean = text |>
+      str_to_lower() |>
+      str_replace_all("\n", " ") |>
+      str_squish(),
+    total_words = str_count(text_clean, "\\S+")
+  )
+      
+  
+```
+
+```{r}
+inflation   <- "\\b(inflation|price|prices)\\b"
+labor       <- "\\b(unemploy(ed|ment)?|jobs?|labor market)\\b"
+risk        <- "\\b(uncertain|uncertainty|risk|risks|volatile|volatility)\\b"
+rx_expansion <- "\\b(strong|robust|solid|expanding|improving|resilient|moderate pace)\\b"
+rx_contraction <- "\\b(slow(ed|ing|down)?|declin(e|ing)|weak(en|ening)?|contraction|recession|deteriorat(e|ion))\\b"
+```
+
+# Business Cycle Signal
+
+```{r}
+fed2 <- fed2 |>
+  mutate(
+    expansion_n = str_count(text_clean, rx_expansion),
+    contraction_n = str_count(text_clean, rx_contraction),
+    expansion_rate = expansion_n / total_words,
+    contraction_rate = contraction_n / total_words,
+    cycle_signal = expansion_rate - contraction_rate
+  )
+```
+
+
+
+```{r}
+cycle_year <- fed2 |>
+  group_by(year) |>
+  summarise(
+    cycle_signal = mean(cycle_signal),
+    .groups = "drop"
+  )
+
+ggplot(cycle_year, aes(x = year, y = cycle_signal)) +
+  geom_line() +
+  geom_point() +
+  geom_vline(xintercept = 2020, linetype = "dashed") +
+  labs(
+    title = "Net Expansion vs Contraction Signal",
+    y = "Expansion minus Contraction Rate"
+  )
+```
+
+# Risk/ Uncertain 
+
+```{r}
+fed2 <- fed2 |>
+  mutate(
+    risk_n = str_count(text_clean, rx_risk),
+    risk_rate = risk_n / total_words
+  )
+```
+
+```{r}
+risk_year <- fed2 |>
+  group_by(year) |>
+  summarise(risk_rate = mean(risk_rate), .groups = "drop")
+
+ggplot(risk_year, aes(x = factor(year), y = risk_rate)) +
+  geom_col() +
+coord_flip()+
+  labs(
+    title = "Risk and Uncertainty Language in FOMC Statements",
+    x = "Year",
+    y = "Risk Mentions per Word"
+  )
+```
+
+#Sentiment Tone
+```{r}
+bing <- get_sentiments("bing")
+
+fed_words <- fed2 |>
+  select(date, year, period, text_clean) |>
+  unnest_tokens(word, text_clean)
+
+sent_statement <- fed_words |>
+  inner_join(bing, by = "word") |>
+  count(date, year, period, sentiment) |>
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) |>
+  mutate(sentiment_score = positive - negative)
+```
+
+
+```{r}
+sent_year <- sent_statement |>
+  group_by(year) |>
+  summarise(avg_sentiment = mean(sentiment_score), .groups = "drop")
+
+ggplot(sent_year, aes(x = factor(year), 
+                      y = avg_sentiment,
+                      fill = avg_sentiment > 0)) +
+  geom_col(show.legend = FALSE) +
+  labs(
+    title = "Average Sentiment in FOMC Statements by Year",
+    x = "Year",
+    y = "Average Sentiment Score"
+  )
+```
+```
+
+```{r}
+#| message: false
+
+library(RTextTools)  # may have to install first
+data(fed1)
+as_tibble(fed1)
+```
+
