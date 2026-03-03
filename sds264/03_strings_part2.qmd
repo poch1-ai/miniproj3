@@ -20,12 +20,12 @@ This uses parts of R4DS Ch 14: Strings and Ch 15: Regular Expressions
 
 str functions to know for manipulating strings:
 
--   str_length()
--   str_sub()
--   str_c()
--   str_to_lower()
--   str_to_upper()
--   str_to_title()
+-   str_length(): Count how many characters are there in the string 
+-   str_sub(): Pull out character base on the pocision
+-   str_c(): to combine all the character string  
+-   str_to_lower(): everything to  lowercase 
+-   str_to_upper(): Everything upper case 
+-   str_to_title():make the first letter capital 
 -   str_replace() *not in 02_strings examples*
 
 ```{r}
@@ -35,7 +35,8 @@ str functions to know for manipulating strings:
 library(tidyverse)
 
 #spotify <- read_csv("Data/spotify.csv") 
-spotify <- read_csv("https://joeroith.github.io/264_spring_2026/Data/spotify.csv")
+spotify <- read_csv("spotify.csv")
+
 
 spot_smaller <- spotify |>
   select(
@@ -60,16 +61,17 @@ spot_smaller
 ```{r}
 spot_new <- spot_smaller |>
   select(title, album_release_date) |>
-  mutate(title_length = str_length(title),
+  mutate(title_length = str_length(title), #count how many character in the title 
          year = str_sub(album_release_date, 1, 4),
-         title_lower = str_to_lower(title),
-         album_release_date2 = str_replace_all(album_release_date, "-", "/"))
+         month = parse_number(str_sub(album_release_date, 6,7)), #Pull out the 2-degit month as a string  
+         title_lower = str_to_lower(title), #make all the letter become lower case 
+         album_release_date2 = str_replace_all(album_release_date, "-", "/")) #replace the character (-) in the variable album_release_date with (/)
 spot_new
          
 max_length <- max(spot_new$title_length)
 
-str_c("The longest title is", max_length, "characters long.", sep = " ")
-str_glue("The longest title is {max_length} characters long.")
+str_c("The longest title is", max_length, "characters long.", sep = " ") #combine all the characters inside the quatation mark where the max_length is computing the longest length of the song title 
+str_glue("The longest title is {max_length} characters long.") #does the same thing as str_c but just use {} to reduce using ""
 ```
 
 ## Important functions for identifying strings which match
@@ -81,24 +83,42 @@ tibble
 1.  Identify the input type and output type for each of these examples:
 
 ```{r}
-str_view(spot_smaller$subgenre, "pop")
-typeof(str_view(spot_smaller$subgenre, "pop"))
-class(str_view(spot_smaller$subgenre, "pop"))
+#str_view(spot_smaller$subgenre, "pop") #input : character vector, output: an htmlwidget object
+#typeof(str_view(spot_smaller$subgenre, "pop")) #input:htmlwidget object, output: character string can be a list  
+#class(str_view(spot_smaller$subgenre, "pop")) #input: htmlwidget object, output: character vector of class labels
 
-str_view(spot_smaller$subgenre, "pop", match = NA)
-str_view(spot_smaller$subgenre, "pop", html = TRUE)
+#str_view(spot_smaller$subgenre, "pop", match = NA) #input: character vector, output: htmlwidget object(with different highlighting behavior because of match = NA)
+#str_view(spot_smaller$subgenre, "pop", html = TRUE) #character vector, output: htmlwidget object 
 
-str_subset(spot_smaller$subgenre, "pop")
+str_subset(spot_smaller$subgenre, "pop") #input: character vector, output: character vector 
 
-str_detect(spot_smaller$subgenre, "pop")
+str_detect(spot_smaller$subgenre, "pop") #input: string vector, output is the logical vector, only True or False 
 ```
 
 2.  Use str_detect to print the rows of the spot_smaller tibble
     containing songs that have "pop" in the subgenre. (i.e. make a new
     tibble with fewer rows)
+```{r}
+spot_smaller |>
+  filter(str_detect(spot_smaller$subgenre, "pop"))
+  
+```
+    
 
 3.  Find the mean song title length for songs with "pop" in the subgenre
     and songs without "pop" in the subgenre.
+```{r}
+spot_smaller|>
+  mutate(sub_pop = str_detect(spot_smaller$subgenre, "pop"),
+         title_length = str_length(title))|>
+  group_by(sub_pop)|>
+  summarize(mean_title_length = mean(title_length), .group= "drop")  #if it's False - no title pop in it 
+    #if true- the title pop is there 
+```
+    
+    
+  
+
 
 Producing a table like this would be great:
 
@@ -112,7 +132,19 @@ Producing a table like this would be great:
 2 TRUE                 13.6
 ```
 
-Producing a table like this would be SUPER great (hint: `ifelse()`):
+Producing a table like this would be
+SUPER great (hint: `ifelse()`):
+```{r}
+spot_smaller|>
+  mutate(sub_pop2 = ifelse(str_detect(spot_smaller$subgenre, "pop"),
+                           "Genre with pop",
+      "Genre without pop"),
+         title_length = str_length(spot_smaller$title))|>
+  group_by(sub_pop2)|>
+  summarize(mean_title_length = mean(title_length), .groups = "drop")
+ 
+```
+
 
 ```{r}
 #| eval: false
@@ -134,6 +166,19 @@ Producing a table like this would be SUPER great (hint: `ifelse()`):
 bigspotify <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
 
 bigspotify
+
+str_view(str_to_lower(bigspotify$track_name), "love")
+
+bigspotify|>
+  filter(!is.na(track_name))|>
+  mutate(title_love = str_to_lower(track_name),
+         love = str_detect(title_love, "love"))|>
+  group_by(playlist_genre)|>
+  summarize(pop_love = mean(love),
+            count =n())
+```
+```
+
 ```
 
 ## Matching patterns with regular expressions
@@ -148,31 +193,36 @@ bigspotify
 ```{r}
 # Guess the output!
 
-str_view(spot_smaller$artist, "^K")
+#str_view(spot_smaller$artist, "^K") #start with K
 
-str_view(spot_smaller$album_release_date, "01$")
+#str_view(spot_smaller$album_release_date, "01$") #end with 01
 
-str_view(spot_smaller$title, "^.. ")
+#str_view(spot_smaller$title, "^.. ") #any first 2 characters 
 
-str_view(spot_smaller$artist, "[^A-Za-z ]")
+#str_view(spot_smaller$artist, "[^A-Za-z ]") #any artist who don't have regular letter in it 
 ```
+
+
 
 5.  Given the corpus of common words in stringr::words, create regular
     expressions that find all words that:
+```{r, eval=FALSE}
+#str_view(stringr :: words, "y") # Start with “y”.
+#str_view(stringr :: words, "x$") # End with “x”
+#str_view(stringr :: words, "^...$") #Are exactly three letters long.
+#str_view(stringr :: words, "^.......")# Have seven letters or more.
+#str_view(stringr :: words, "^[A,E,I,O,U,a,e,i,o,u]")# Start with a vowel.
+#str_view(stringr :: words, "^[^e]ed$")# End with ed, but not with eed.
+#str_view(stringr :: words, "^q[^u]")# Words where q is not followed by u. (are there any in `words`?)
+```
+  
 
--   Start with “y”.
--   End with “x”
--   Are exactly three letters long.
--   Have seven letters or more.
--   Start with a vowel.
--   End with ed, but not with eed.
--   Words where q is not followed by u. (are there any in `words`?)
 
 ```{r}
 # Try using str_view() or str_subset()
 
 # For example, to find words with "tion" at any point, I could use:
-str_view(words, "tion")
+#str_view(words, "tion") #shows where the strings is
 str_subset(words, "tion")
 ```
 
@@ -185,9 +235,9 @@ str_subset(words, "tion")
 | `\\b` | any boundary: space, ., etc. |
 
 ```{r}
-str_view(spot_smaller$album_name, "\\d")
-str_view(spot_smaller$album_name, "\\s")
-str_view(spot_smaller$album_name, "\\b")
+#str_view(spot_smaller$album_name, "\\d") #any degit 
+#str_view(spot_smaller$album_name, "\\s") #any space
+#str_view(spot_smaller$album_name, "\\b") #any boundary: space
 ```
 
 Here are the regular expression special characters that require an
@@ -199,17 +249,37 @@ special meaning ... but `\` is itself a special character ... so we need
 two `\\`! (e.g. `\\$`, `\\.`, etc.)
 
 ```{r}
-str_view(spot_smaller$title, "$")
-str_view(spot_smaller$title, "\\$")
+#str_view(spot_smaller$title, "$")
+#str_view(spot_smaller$title, "\\$") #if you want to find the $ you gotta use \\$
 ```
 
 6.  In bigspotify, how many track_names include a `$`? Be sure you print
     the track_names you find and make sure the dollar sign is not just
     in a featured artist!
-
+```{r}
+bigspotify|>
+  filter(str_detect(track_name, "\\$"))|>
+  filter(!str_detect(track_name, "(feat | with).*\\$"))|> #if you do [feat] it will mean you don't want 
+  select(track_name, track_artist)|>
+  print(n = Inf)
+```
+    
+    
 7.  In bigspotify, how many track_names include a dollar amount (a `$`
     followed by a number).
+```{r}
+bigspotify|>
+  filter(str_detect(track_name, "\\$\\d"))|>
+  select(track_name, track_artist)
+```
 
+or 
+
+```{r}
+bigspotify|>
+  filter(str_detect(track_name, "\\$[0-9]"))|>
+  select(track_name, track_artist)
+```
 ## Repetition
 
 |         |                       |
@@ -222,36 +292,66 @@ str_view(spot_smaller$title, "\\$")
 | `{,m}`  | at most m times       |
 | `{n,m}` | between n and m times |
 
-```{r}
-str_view(spot_smaller$album_name, "[A-Z]{2,}")
 
-str_view(spot_smaller$album_release_date, "\\d{4}-\\d{2}")
+
+```{r}
+#str_view(spot_smaller$album_name, "[A-Z]{2,}")
+#str_view(spot_smaller$album_release_date, "\\d{4}-\\d{2}")
+         
 ```
+
 
 **Use at least 1 repetition symbol when solving 8-10 below**
 
 8.  Modify the first regular expression above to also pick up "A.A" (in
     addition to "BEYONC" and "II"). That is, pick up strings where there
     might be a period between capital letters.
+    
+```{r}
+#str_view(spot_smaller$album_name, "[A-Z]{2,}| [A-Z]\\.[A-Z]+") #the + can capture the captial letter after that 
+  
+  
+```
+
+or 
+```{r}
+#str_view(spot_smaller$album_name, "[A-Z.]{2,}") # the dot inside the [] , capital letter followed by dot 
+```
 
 9.  Create some strings that satisfy these regular expressions and
     explain.
 
--   `"^.*$"`
--   `"\{.+\}"`
+-   `"^.*$"` ( Start with any character, end with any character)
+
+
+-   `"\{.+\}"` (looking for the string that have {}, that have something inside of it)
+```{r}
+#str_view("This is $200", "^.*$ ") # start with anything, ends with anything - haven' escaped the $
+#str_view("Why is this I {that}",`"\{.+\}"`  ) # anything that includes {}, anything amount of degit or characters that appear 1 or more time 
+```
 
 10. Create regular expressions to find all `stringr::words` that:
 
 -   Start with three consonants.
+```{r}
+#str_view(stringr :: words, "^[^aeiou]{3}")
+```
+
 -   Have two or more vowel-consonant pairs in a row.
+```{r}
+#str_view(stringr :: words, "([aeiou] | [^^aeiou] |[aeiou] | [^^aeiou]){2,} ")
+#str_view(stringr :: words, "([aeiou] | [^^aeiou] |[aeiou] | [^^aeiou]){2,} ")
+```
+
 
 ## Useful functions for handling patterns
 
-str_extract() : extract a string that matches a pattern str_count() :
+str_extract() : extract a string that matches a pattern str_count() : ( spring detect )
 count how many times a pattern occurs within a string
 
 ```{r}
 str_extract(spot_smaller$album_release_date, "\\d{4}-\\d{2}")
+
 
 spot_smaller |>
   select(album_release_date) |>
@@ -264,11 +364,32 @@ spot_smaller |>
 
 11. In the spot_smaller dataset, how many words are in each title?
     (hint: `\\b`)
+```{r}
+spot_smaller |>
+  select(title)|>
+  mutate(title2 = str_count(title,"\\b\\w+\\b" )) #w+ means let the words repeat 
+```
+    
 
 12. In the spot_smaller dataset, extract the first word from every
     title. Show how you would print out these words as a vector and how
     you would create a new column on the spot_smaller tibble. That is,
     produce this:
+```{r}
+
+str_extract(spot_smaller$title, "^[^ ]+")
+
+
+str_sub(str_extract(spot_smaller$title, "^[^ ]+"))
+
+```
+    
+```{r}
+spot_smaller|>
+  select(title)|>
+  mutate(one_word_title = str_extract(spot_smaller$title, "^[^ ]+"))
+ 
+```
 
 ```{r}
 # [1] "Hear"      "Run"       "Formation" "7/11"      "My"        "It's"     
@@ -303,18 +424,33 @@ Then this:
 -   what if you include both "80's" and "80s"?
 -   how can you count "80's" and "80s" together in your final tibble?
 
+```{r}
+bigspotify|>
+  select(playlist_name, track_name)|>
+  filter(str_detect(playlist_name, "\\d{2}'s")| 
+        str_detect(playlist_name, "\\d{2}s"))|>
+  mutate(decade = str_extract(playlist_name,"\\d{2}'s|\\d{2}s"))|>
+  count(decade, sort = TRUE)
+  
+  
+```
+
+
+  
+
 ## Grouping and backreferences
 
 ```{r}
 # find all fruits with repeated pair of letters.  
 fruit = stringr::fruit
 fruit
-str_view(fruit, "(..)\\1", match = TRUE)
+#str_view(fruit, "(..)\\1", match = TRUE) #2 same characters follow by each other 
 
 # why does the code below add "pepper" and even "nectarine"?
-str_view(fruit, "(..)(.*)\\1", match = TRUE)
+#str_view(fruit, "(..)(.*)\\1", match = TRUE)# any single chracter, follow by single character, 
 ```
 
+(...) position 
 Tips with backreference:
 
 -   You must use () around the the thing you want to reference.
@@ -324,29 +460,52 @@ Tips with backreference:
 
 ```{r}
 x1 <- c("abxyba", "abccba", "xyaayx", "abxyab", "abcabc")
-str_view(x1, "(.)(.)(..)\\2\\1")
-str_view(x1, "(.)(.)(..)\\1\\2")
-str_view(x1, "(.)(.)(.)\\1\\2\\3")
+#str_view(x1, "(.)(.)(..)\\2\\1")
+#str_view(x1, "(.)(.)(..)\\1\\2")
+#str_view(x1, "(.)(.)(.)\\1\\2\\3")
 ```
 
 14. Describe to your groupmates what these expressions will match, and
     provide a word or expression as an example:
+    
+```{r}
+fruit = stringr::fruit
+#str_view(stringr::words, "(.)\\1\\1", match = TRUE)
 
--   `"(.)\\1\\1"`
--   `"(.)(.)(.).*\\3\\2\\1"`
+```
+    
+
+-   `"(.)\\1\\1"` : This will capture the tripple repeated letters
+-   `"(.)(.)(.).*\\3\\2\\1"`: First 3 letters, mirrors the end, abccab  
 
 Which words in `stringr::words` match each expression?
+
 
 15. Construct a regular expression to match words in `stringr::words`
     that contain a repeated pair of letters (e.g. “church” contains “ch”
     repeated twice) but *not* match repeated pairs of numbers (e.g.
     507-786-3861).
+```{r}
+#str_view(stringr::words, "([A-Za-z]{2}).*\\1", match = TRUE) 
+```
+    
 
 16. Reformat the album_release_date variable in spot_smaller so that it
     is MM-DD-YYYY instead of YYYY-MM-DD. (Hint: str_replace().)
 
+```{r}
+spot_smaller|>
+  select(album_release_date)|>
+  mutate(album_release_date =
+           str_replace(album_release_date,
+                       "^(\\d{4})-(\\d{2})-(\\d{2})$",
+                       "\\2-\\3-\\1"))
+  
+```
+
 17. BEFORE RUNNING IT, explain to your partner(s) what the following R
     chunk will do:
+     **Capture the first second and thrid string that come after the space. The first string/ character would stay the same but the 2nd and 3rd change possition with each other** 
 
 ```{r}
 sentences |> 

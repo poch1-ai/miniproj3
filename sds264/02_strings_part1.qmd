@@ -9,6 +9,8 @@ editor:
     wrap: sentence
 ---
 
+
+
 You can download this .qmd file from [here](https://github.com/joeroith/264_spring_2026/blob/main/02_strings_part1.qmd).
 Just hit the Download Raw File button.
 
@@ -67,7 +69,7 @@ spot_smaller$title[1]
 
 ```{r}
 # when the input to str_length is a single string, the output is a single value:
-str_length("hi")
+str_length("hi/hehehe")
 
 str_length(single_string)
 
@@ -102,6 +104,10 @@ string_vector
 str_sub(string_vector, 1, 2)
 ```
 
+```{r}
+
+```
+
 How can we use str_sub to get just the year of the album_release_date?
 Try it here!
 Then scroll down for solution.
@@ -111,8 +117,6 @@ spot_smaller |>
   mutate(release_year = str_sub(album_release_date, 1, 4)) |> 
   select(title, album_release_date, release_year)
 ```
-
-. . . . . . . .
 
 
 
