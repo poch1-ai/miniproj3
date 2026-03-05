@@ -1,6 +1,6 @@
 ---
 title: "Mini-Project 1: Text Analysis"
-subtitle: "Signaling the Business Cycle: How FOMC Communication Shifted Before and After COVID-19”
+subtitle: "How FOMC Communication Shifted Before and After COVID-19”
 format:
   html: default
 editor_options: 
@@ -9,31 +9,29 @@ editor_options:
 
 ## Overview
 
-You will find a data set containing string data.  This could be newspaper articles, tweets, songs, plays, movie reviews, or anything else you can imagine.  Then you will answer questions of interest and tell a story about your data using skills you have developed in strings, regular expressions, and text analysis.
+You will find a data set containing string data. This could be newspaper articles, tweets, songs, plays, movie reviews, or anything else you can imagine. Then you will answer questions of interest and tell a story about your data using skills you have developed in strings, regular expressions, and text analysis.
 
 Your story should be 3-5 pages once rendered to a pdf (but could be longer, try to keep it under 7), this is including reasonably sized plots and tables. Think of this like a blog post or article you're writing. Introduce the data and what you want to explore, then walk the reader (me) through your analysis and thought process. Be sure to highlight interesting insights along the way, then wrap up with some of your key findings.
 
 Your analysis must contain the following elements:
 
-- *at least* 3 different str_ functions
-- *at least* 3 different regular expressions
-- *at least* 2 different text analysis applications (count words, bing sentiment, afinn sentiment, nrc sentiment, wordclouds, trajectories over sections or time, tf-idf, bigrams, correlations, networks, LDA, etc.).  Note that many interesting insights can be gained by strategic and thoughtful use of regular expressions paired with simple counts and summary statistics.
-- *at least* 3 illustrative, well-labeled plots or tables, one of which is described with alt-text using the [Four Ingredients Model](https://drive.google.com/file/d/1BuEbL6vETBcFULmtlrwwZBUYhdEg0Zqb/view)
-- a description of what insights can be gained from your plots and tables.  *Be sure you weave a compelling and interesting story!*
+-   *at least* 3 different str\_ functions
+-   *at least* 3 different regular expressions
+-   *at least* 2 different text analysis applications (count words, bing sentiment, afinn sentiment, nrc sentiment, wordclouds, trajectories over sections or time, tf-idf, bigrams, correlations, networks, LDA, etc.). Note that many interesting insights can be gained by strategic and thoughtful use of regular expressions paired with simple counts and summary statistics.
+-   *at least* 3 illustrative, well-labeled plots or tables, one of which is described with alt-text using the [Four Ingredients Model](https://drive.google.com/file/d/1BuEbL6vETBcFULmtlrwwZBUYhdEg0Zqb/view)
+-   a description of what insights can be gained from your plots and tables. *Be sure you weave a compelling and interesting story!*
 
-Be sure to highlight the elements above so that they are easy for me to spot!  
+Be sure to highlight the elements above so that they are easy for me to spot!
 
-You will hand in this project by pushing your work (qmd file, data set(s), and rendered pdf) to GitHub and providing me with a link submitted on Moodle.  If you have a private repository, you might have to add me (joeroith) as a collaborator.
-
+You will hand in this project by pushing your work (qmd file, data set(s), and rendered pdf) to GitHub and providing me with a link submitted on Moodle. If you have a private repository, you might have to add me (joeroith) as a collaborator.
 
 ## Evaluation Rubric
 
 Available [here](https://drive.google.com/file/d/1QhoyZSA0wm_WnwY1DEDOfCtWXhTaTSty/view?usp=sharing).
 
-
 ## Timeline
 
-Mini-Project 1 must be submitted on Moodle by **11:00 PM on Wed Mar 4**.   
+Mini-Project 1 must be submitted on Moodle by **11:00 PM on Wed Mar 4**.
 
 You should have the following in your GitHub repo:
 
@@ -43,8 +41,22 @@ $\Box$ clearly named qmd file with all code, well commented
 
 $\Box$ Rendered pdf, with a title and author at the top, you should suppress all messages and warnings, but you may have code visible in the pdf.
 
+# 1. Introduction
+
+In The United State, The Federal Open Market Commitee ( FOMC)\[\^1\] regulary release its statement every months after each meeting to explain its assesment of economic condition and its decisions regarding to interest rates and manetary policy ( whether increase/ decrease of interest rate or money supply). These statements let us get some insight about how the Federal reserve interprets the change in inflation, employment and overall economic activity.
+
+The COVID-19 had servere affect to the economy around the world. This leads to a sharp change in economic activity. Economic growth declined, unemployment rose dramatically, and financial markets experienced significant volatility.During such periods of uncertainty, the way policymakers communicate economic conditions becomes particularly important.
+
+In this project I will use text analysis to **examine how the language in FOMC statements changed before, during, and after the COVID-19 shock.** I will analyse the content of FOMC statement from 2015 to 2023, mainly focus on several aspects of communication including, the most frequently used words in the statements, whether the language signals contraction or expansion, how often the Fed uses positive or negative economic language and how often the Fed uses positive versus negative economic language.
+
+# 2. Data
+
+In this project I will be using the data from the FOMC statements\[\^2\] from 2015 to 2023. There are 36 observations and 5 columns containing the period, date, year, month, and full text of the statement. Because FOMC statements are released regularly and follow a similar structure, they provide a useful source for analyzing how the Federal Reserve communicates changes in economic conditions over time.
 
 ```{r}
+#| include: false
+#| message: false
+
 library(readr)
 library(tidyverse)
 library(lubridate)
@@ -54,22 +66,14 @@ mini_project <- read_csv("miniproject_sds264/mini project.csv")
 View(mini_project)
 ```
 
-## Topic Ideas
+# 3. Data Cleaning
 
-Topic overview:
-Section 1 — Business Cycle Signal
-Section 2 — Risk/Uncertainty Communication
-Section 3 — Sentiment Tone
+Before performing the text analysis, Before performing text analysis, the FOMC statements were cleaned and prepared for analysis. First, I started to convert the text to lowercase and extra spacing or line breaks were removed to ensure consistency. The date variable was also converted into a standard date format. Then, I removed stop words—common words such as “the,” “and,” and “of” in order to analyze word frequencies so that the results would highlight more meaningful economic terms. Finally, the total number of words in each statement was calculated so that word counts could be normalized across statements of different lengths.
 
 ```{r}
 #| include: false
 #| message: false
 
-library(lubridate)
-library(tidyverse)
-```
-
-```{r}
 fed <- mini_project |>
   rename(
     date = `Date`,
@@ -77,6 +81,7 @@ fed <- mini_project |>
     month = `Month`,
     text = `Text`
   )
+
 ```
 
 ```{r}
@@ -87,8 +92,8 @@ fed <- mini_project |>
     month = str_squish(month),
     period = case_when(
       year <= 2019 ~ "Pre-COVID",
-      year == 2020 ~ "COVID Shock",
-      year >= 2021 ~ "Post-COVID"
+      year %in% c(2020, 2021) ~ "COVID Shock",
+      year >= 2022 ~ "Post-COVID"
     ),
     text_clean = text |>
       str_to_lower() |>
@@ -101,30 +106,58 @@ fed <- mini_project |>
 ```
 
 ```{r}
-inflation   <- "\\b(inflation|price|prices)\\b"
-labor       <- "\\b(unemploy(ed|ment)?|jobs?|labor market)\\b"
-risk        <- "\\b(uncertain|uncertainty|risk|risks|volatile|volatility)\\b"
-rx_expansion <- "\\b(strong|robust|solid|expanding|improving|resilient|moderate pace)\\b"
-rx_contraction <- "\\b(slow(ed|ing|down)?|declin(e|ing)|weak(en|ening)?|contraction|recession|deteriorat(e|ion))\\b"
+get_stopwords() |> print(n = 50)   
+get_stopwords(source = "smart") |> print(n = 50)   
+
+smart_stopwords <- get_stopwords(source = "smart")
 ```
 
-# Business Cycle Signal
+# 4. Results
+
+[***4.1.The most frequently used words in the statements***]{.underline}
+
+```{r fig.cap = " Figure 1. Shows the most frequently used words in FOMC policy statements after removing common stopwords. Several key economic terms appear prominently, including inflation, economic, rate, and market. This suggests that the statements largely focus on inflation conditions and monetary policy decisions, which are central responsibilities of the Federal Reserve.}
+#| warning: FALSE
+#| message: FALSE
+
+words_fed <- fed_words |>
+  anti_join(stop_words) |>
+  count(word) |>
+  filter(word != "NA") |>
+  arrange(desc(n))
+
+words_size <- words_fed |>
+  slice_head(n = 100) |>
+  data.frame()
+
+wordcloud2(
+  words_size, 
+  size = .5, 
+  shape = 'circle',
+  minSize = 10
+)
+```
+
+[***4.2.When did the FOMC statement langauge shows that the economy is expanding or contracting, Business Cycle Signal?***]{.underline}
 
 ```{r}
-fed2 <- fed2 |>
+expansion <- "\\b(strong|robust|solid|expanding|improving|resilient|moderate|strengthen)\\b"
+contraction <- "\\b(slow(ed|ing|down)?|declin(e|ing)|weak(en|ening)?|contraction|recession|deteriorat(e|ion))\\b"
+```
+
+```{r}
+fed_cycle <- fed2 |>
   mutate(
-    expansion_n = str_count(text_clean, rx_expansion),
-    contraction_n = str_count(text_clean, rx_contraction),
+    expansion_n = str_count(text_clean, expansion),
+    contraction_n = str_count(text_clean, contraction),
     expansion_rate = expansion_n / total_words,
     contraction_rate = contraction_n / total_words,
     cycle_signal = expansion_rate - contraction_rate
   )
 ```
 
-
-
 ```{r}
-cycle_year <- fed2 |>
+cycle_year <- fed_cycle |>
   group_by(year) |>
   summarise(
     cycle_signal = mean(cycle_signal),
@@ -137,73 +170,123 @@ ggplot(cycle_year, aes(x = year, y = cycle_signal)) +
   geom_vline(xintercept = 2020, linetype = "dashed") +
   labs(
     title = "Net Expansion vs Contraction Signal",
-    y = "Expansion minus Contraction Rate"
-  )
+x = "Year",
+y = "Expansion minus Contraction Rate")+
+theme_economist()
 ```
 
-# Risk/ Uncertain 
+[***4.3.When did the FOMC statement use good vs bad economic langauge the most or the least?***]{.underline}
 
 ```{r}
-fed2 <- fed2 |>
+good_growth <- "\\b(strong|solid|robust|resilient|improv(ing|ed)|expand(ing|ed)|growth|gains?)\\b"
+good_infla <- "\\b(inflation (has )?(eased|moderated|declined|fallen|decreased)|disinflation|price pressures (have )?(eased|moderated))\\b"
+good_emp <- "\\b(unemployment (remains|has remained) low|job gains (have been )?(strong|solid|robust)|labor market (remains|has remained) strong|employment (has )?(increased|grown))\\b"
+bad_infla <- "\\b(inflation (has )?(increased|picked up|risen)|inflation is (high|elevated|running high)|price pressures (have )?(increased|intensified)|higher inflation)\\b"
+bad_growth <-"\\b(economic (activity|growth) (has )?(slowed|weakened|declined)|growth (has )?(slowed|weakened)|output (has )?(declined|fallen)|demand (has )?(softened|weakened))\\b"
+bad_empl <-"\\b(unemployment (has )?(increased|risen)|job losses|layoffs|employment (has )?(declined|fallen)|labor market (has )?(weakened|deteriorated))\\b"
+```
+
+```{r}
+fed_goodbad <- fed2 |>
   mutate(
-    risk_n = str_count(text_clean, rx_risk),
-    risk_rate = risk_n / total_words
+    good_n = str_count(text_clean, good_growth) +
+             str_count(text_clean, good_infla) +
+             str_count(text_clean, good_emp),
+
+    bad_n  = str_count(text_clean, bad_growth) +
+             str_count(text_clean, bad_infla) +
+             str_count(text_clean, bad_empl),
+
+    good_rate = good_n / total_words,
+    bad_rate  = bad_n / total_words
   )
 ```
 
 ```{r}
-risk_year <- fed2 |>
+year_goodbad <- fed_goodbad |>
   group_by(year) |>
-  summarise(risk_rate = mean(risk_rate), .groups = "drop")
-
-ggplot(risk_year, aes(x = factor(year), y = risk_rate)) +
-  geom_col() +
-coord_flip()+
-  labs(
-    title = "Risk and Uncertainty Language in FOMC Statements",
-    x = "Year",
-    y = "Risk Mentions per Word"
+  summarise(
+    good_rate = mean(good_rate),
+    bad_rate  = mean(bad_rate),
+    .groups = "drop"
   )
 ```
 
-#Sentiment Tone
 ```{r}
-bing <- get_sentiments("bing")
+year_long <- year_goodbad |>
+  pivot_longer(cols = c(good_rate, bad_rate),
+               names_to = "tone",
+               values_to = "rate") |>
+  mutate(tone = recode(tone,
+                       good_rate = "Good",
+                       bad_rate  = "Bad"))
 
-fed_words <- fed2 |>
-  select(date, year, period, text_clean) |>
-  unnest_tokens(word, text_clean)
+ggplot(year_long, aes(x = factor(year), y = rate, fill = tone)) +
+  geom_col(position = "dodge") +
+  labs(
+    title = "Good vs Bad Economic Language in FOMC Statements by Year",
+    x = "Year",
+    y = "Mentions per Word",
+    fill = NULL
+  )
+```
 
-sent_statement <- fed_words |>
+[***4.4 What are sentiment words that FOMC statement mention, how did it change by years?***]{.underline}
+
+```{r}
+get_stopwords() |> print(n = 50)   
+get_stopwords(source = "smart") |> print(n = 50)   
+
+
+smart_stopwords <- get_stopwords(source = "smart")
+```
+
+```{r}
+get_sentiments(lexicon = "afinn")
+get_sentiments(lexicon = "nrc")
+get_sentiments(lexicon = "bing")
+
+bing_sentiments <- get_sentiments(lexicon = "bing")
+```
+
+```{r}
+fed_words|>
+ inner_join(bing_sentiments) |>
+  count(sentiment)|>
+
+```
+
+```{r}
+fed_words|>
+ inner_join(bing_sentiments) |>
+  count(sentiment, word, sort = TRUE) |>
+  group_by(sentiment) |>
+  slice_max(n, n = 10) |>
+  ungroup() |>
+  ggplot(aes(x = fct_reorder(word, n), y = n, fill = sentiment)) +
+    geom_col() +  
+    coord_flip() +
+    facet_wrap(~ sentiment, scales = "free")
+```
+
+```{r}
+sent_year_words <- fed_words |>
+filter(year %in% c( 2019, 2020, 2021, 2022 ))|>
   inner_join(bing, by = "word") |>
-  count(date, year, period, sentiment) |>
-  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) |>
-  mutate(sentiment_score = positive - negative)
-```
+  count(year, sentiment, word, sort = TRUE) |>
+  group_by(year, sentiment) |>
+  slice_max(n, n = 5, with_ties = FALSE) |>
+  ungroup()
 
-
-```{r}
-sent_year <- sent_statement |>
-  group_by(year) |>
-  summarise(avg_sentiment = mean(sentiment_score), .groups = "drop")
-
-ggplot(sent_year, aes(x = factor(year), 
-                      y = avg_sentiment,
-                      fill = avg_sentiment > 0)) +
+ggplot(sent_year_words, aes(x = fct_reorder(word, n), y = n, fill = sentiment)) +
   geom_col(show.legend = FALSE) +
+  coord_flip() +
+  facet_grid(sentiment ~ year, scales = "free") +
   labs(
-    title = "Average Sentiment in FOMC Statements by Year",
-    x = "Year",
-    y = "Average Sentiment Score"
+    title = "Most Frequent Sentiment Words in FOMC Statements by Year",
+    x = NULL,
+    y = "Word Count"
   )
 ```
-```
 
-```{r}
-#| message: false
-
-library(RTextTools)  # may have to install first
-data(fed1)
-as_tibble(fed1)
-```
-
+# Reference
