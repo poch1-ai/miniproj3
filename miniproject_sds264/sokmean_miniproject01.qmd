@@ -1,78 +1,49 @@
 ---
 title: "Mini-Project 1: Text Analysis"
-subtitle: "How FOMC Communication Shifted Before and After COVID-19”
+subtitle: "How FOMC Communication Shifted Before and After COVID-19"
 format:
-  html: default
+  pdf:
+    prefer-html: true
 editor_options: 
   chunk_output_type: console
 ---
 
-## Overview
-
-You will find a data set containing string data. This could be newspaper articles, tweets, songs, plays, movie reviews, or anything else you can imagine. Then you will answer questions of interest and tell a story about your data using skills you have developed in strings, regular expressions, and text analysis.
-
-Your story should be 3-5 pages once rendered to a pdf (but could be longer, try to keep it under 7), this is including reasonably sized plots and tables. Think of this like a blog post or article you're writing. Introduce the data and what you want to explore, then walk the reader (me) through your analysis and thought process. Be sure to highlight interesting insights along the way, then wrap up with some of your key findings.
-
-Your analysis must contain the following elements:
-
--   *at least* 3 different str\_ functions
--   *at least* 3 different regular expressions
--   *at least* 2 different text analysis applications (count words, bing sentiment, afinn sentiment, nrc sentiment, wordclouds, trajectories over sections or time, tf-idf, bigrams, correlations, networks, LDA, etc.). Note that many interesting insights can be gained by strategic and thoughtful use of regular expressions paired with simple counts and summary statistics.
--   *at least* 3 illustrative, well-labeled plots or tables, one of which is described with alt-text using the [Four Ingredients Model](https://drive.google.com/file/d/1BuEbL6vETBcFULmtlrwwZBUYhdEg0Zqb/view)
--   a description of what insights can be gained from your plots and tables. *Be sure you weave a compelling and interesting story!*
-
-Be sure to highlight the elements above so that they are easy for me to spot!
-
-You will hand in this project by pushing your work (qmd file, data set(s), and rendered pdf) to GitHub and providing me with a link submitted on Moodle. If you have a private repository, you might have to add me (joeroith) as a collaborator.
-
-## Evaluation Rubric
-
-Available [here](https://drive.google.com/file/d/1QhoyZSA0wm_WnwY1DEDOfCtWXhTaTSty/view?usp=sharing).
-
-## Timeline
-
-Mini-Project 1 must be submitted on Moodle by **11:00 PM on Wed Mar 4**.
-
-You should have the following in your GitHub repo:
-
-$\Box$ the dataset you used as .csv or .txt file (even if your data is from an R package save a version of it as a csv, you can use the `write_csv()` function or see me for help doing this)
-
-$\Box$ clearly named qmd file with all code, well commented
-
-$\Box$ Rendered pdf, with a title and author at the top, you should suppress all messages and warnings, but you may have code visible in the pdf.
 
 # 1. Introduction
 
-In The United State, The Federal Open Market Commitee ( FOMC)\[\^1\] regulary release its statement every months after each meeting to explain its assesment of economic condition and its decisions regarding to interest rates and manetary policy ( whether increase/ decrease of interest rate or money supply). These statements let us get some insight about how the Federal reserve interprets the change in inflation, employment and overall economic activity.
+In The United State, The Federal Open Market Commitee ( FOMC)[^1] regulary release its statement every months after each meeting to explain its assessment of economic condition and its decisions regarding to interest rates and monetary policy ( whether increase/ decrease of interest rate or money supply). These statements let us get some insight about how the Federal reserve interprets the change in inflation, employment and overall economic activity.
 
-The COVID-19 had servere affect to the economy around the world. This leads to a sharp change in economic activity. Economic growth declined, unemployment rose dramatically, and financial markets experienced significant volatility.During such periods of uncertainty, the way policymakers communicate economic conditions becomes particularly important.
+The COVID-19 had severe affect to the economy around the world. This leads to a sharp change in economic activity. Economic growth declined, unemployment rose dramatically, and financial markets experienced significant volatility.During such periods of uncertainty, the way policymakers communicate economic conditions becomes particularly important.
 
 In this project I will use text analysis to **examine how the language in FOMC statements changed before, during, and after the COVID-19 shock.** I will analyse the content of FOMC statement from 2015 to 2023, mainly focus on several aspects of communication including, the most frequently used words in the statements, whether the language signals contraction or expansion, how often the Fed uses positive or negative economic language and how often the Fed uses positive versus negative economic language.
 
 # 2. Data
 
-In this project I will be using the data from the FOMC statements\[\^2\] from 2015 to 2023. There are 36 observations and 5 columns containing the period, date, year, month, and full text of the statement. Because FOMC statements are released regularly and follow a similar structure, they provide a useful source for analyzing how the Federal Reserve communicates changes in economic conditions over time.
+In this project I will be using the data from the FOMC statements[^2] from 2015 to 2023. There are 36 observations and 5 columns containing the period, date, year, month, and full text of the statement. Because FOMC statements are released regularly and follow a similar structure, they provide a useful source for analyzing how the Federal Reserve communicates changes in economic conditions over time.
 
 ```{r}
 #| include: false
 #| message: false
-
+#| echo: false
 library(readr)
 library(tidyverse)
 library(lubridate)
 library(stringr)
 library(readr)
-mini_project <- read_csv("miniproject_sds264/mini project.csv")
-View(mini_project)
+library(tidytext)
+library(wordcloud2)
+library(ggthemes)
+mini_project <- read_csv("~/Data Science 2/project1/miniproject_sds264/mini project.csv")
+#View(mini_project)
 ```
 
 # 3. Data Cleaning
-
-Before performing the text analysis, Before performing text analysis, the FOMC statements were cleaned and prepared for analysis. First, I started to convert the text to lowercase and extra spacing or line breaks were removed to ensure consistency. The date variable was also converted into a standard date format. Then, I removed stop words—common words such as “the,” “and,” and “of” in order to analyze word frequencies so that the results would highlight more meaningful economic terms. Finally, the total number of words in each statement was calculated so that word counts could be normalized across statements of different lengths.
+In this project, I will use  4 str_fuction. I use str_to_lower() to make all words lowercase, str_replace_all() to remove line breaks, and str_squish() to remove extra spaces. I also use str_count() with the regular expression \\S+ to count the total number of words in each statement. These steps make the text consistent and allow fair comparison across statements.
 
 ```{r}
 #| include: false
 #| message: false
+#| echo: false
 
 fed <- mini_project |>
   rename(
@@ -84,7 +55,12 @@ fed <- mini_project |>
 
 ```
 
+
 ```{r}
+#| include: false
+#| message: false
+#| echo: false
+#| results: 'hide'
  fed2 <-fed |>
   mutate(
     date = mdy(date),
@@ -105,20 +81,38 @@ fed <- mini_project |>
   
 ```
 
+I use unnest_tokens() to split each FOMC statement into individual words which will make it posible for me to count word frequency and join the words to sentiment lexicons later in the analysis.
+
 ```{r}
+#| results: 'hide'
 get_stopwords() |> print(n = 50)   
 get_stopwords(source = "smart") |> print(n = 50)   
 
+
 smart_stopwords <- get_stopwords(source = "smart")
+```
+
+```{r}
+#| results: 'hide'
+fed_words <- fed2 |>
+  select(date, year, month, period, text_clean) |>
+  unnest_tokens(word, text_clean) |>
+  anti_join(stop_words, by = "word")
 ```
 
 # 4. Results
 
 [***4.1.The most frequently used words in the statements***]{.underline}
 
-```{r fig.cap = " Figure 1. Shows the most frequently used words in FOMC policy statements after removing common stopwords. Several key economic terms appear prominently, including inflation, economic, rate, and market. This suggests that the statements largely focus on inflation conditions and monetary policy decisions, which are central responsibilities of the Federal Reserve.}
+In this section, I count individual words after removing stop words to see most common terms in FOMC statements. This will help me see what are the words that are emphasized the which can be Inflation or unemployment or market.I use wordcloud2()  to visualize the most frequent words.
+
+```{r fig.cap = "Figure 1. Shows the most frequently used words in FOMC policy statements after removing common stopwords. Several key economic terms appear prominently, including inflation, economic, rate, and market. This suggests that the statements largely focus on inflation conditions and monetary policy decisions, which are central responsibilities of the Federal Reserve."}
 #| warning: FALSE
 #| message: FALSE
+#| results: 'hide'
+#| fig-width: 5
+#| fig-height: 3
+#| out-width: "70%"
 
 words_fed <- fed_words |>
   anti_join(stop_words) |>
@@ -132,13 +126,17 @@ words_size <- words_fed |>
 
 wordcloud2(
   words_size, 
-  size = .5, 
+  size = 0.5, 
   shape = 'circle',
   minSize = 10
 )
 ```
 
+This figure is a word cloud displaying the most frequent words used in the FOMC policy statement from 2015-2023 after removing common stop words. The visualization does not have axes but in stead, the size of each words represents its frequency in the statement. The larger ones appear more often in the text. Word frequency range from relatively small count for less common terms to higher count with the larger word in the middle. The appearance shows words such as " Inflation", "committtee", " economics", " market" appears most frequent which indicated that the FOMC communication strongly emphasizes inflation condition, monetary policy decisions, and overall economic activity
+
 [***4.2.When did the FOMC statement langauge shows that the economy is expanding or contracting, Business Cycle Signal?***]{.underline}
+
+I create one regular expression for expansion-related words such as “strong,” “robust,” and “improving,” and another for contraction-related words such as “slowed,” “decline,” and “recession.” I used \\b to match whole words only, and grouped endings like (ed|ing) to capture multiple forms of the same word.I used str_count() to count how often expansion and contraction words appear in each statement. Then I divided by total words to create a normalized rate, so longer statements would not automatically have larger counts.
 
 ```{r}
 expansion <- "\\b(strong|robust|solid|expanding|improving|resilient|moderate|strengthen)\\b"
@@ -146,6 +144,7 @@ contraction <- "\\b(slow(ed|ing|down)?|declin(e|ing)|weak(en|ening)?|contraction
 ```
 
 ```{r}
+#| results: 'hide'
 fed_cycle <- fed2 |>
   mutate(
     expansion_n = str_count(text_clean, expansion),
@@ -156,7 +155,11 @@ fed_cycle <- fed2 |>
   )
 ```
 
-```{r}
+```{r fig.cap = "Figure 2. shows the net expansion vs contraction signal in the FOMC statements by year. Before 2020 ( Pre-Covid), exspansionary langauges increases then drops sharply during COVID shock, which shows more cautious economics communication by the federal reserve."}
+#| results: 'hide'
+#| fig-width: 5
+#| fig-height: 3
+#| out-width: "70%"
 cycle_year <- fed_cycle |>
   group_by(year) |>
   summarise(
@@ -170,13 +173,18 @@ ggplot(cycle_year, aes(x = year, y = cycle_signal)) +
   geom_vline(xintercept = 2020, linetype = "dashed") +
   labs(
     title = "Net Expansion vs Contraction Signal",
+    subtitle = "Business cycle signal", 
+    caption = "Data source:(https://www.federalreserve.gov/monetarypolicy/fomc.htm)",
 x = "Year",
 y = "Expansion minus Contraction Rate")+
-theme_economist()
+theme_minimal()
 ```
 
-[***4.3.When did the FOMC statement use good vs bad economic langauge the most or the least?***]{.underline}
+This is a line chart showing the net expansion vs contraction signal in the FOMC statement over time. The x-axis represents year, ranging from 2015 to 2023. The y-axis represents the expansion - contraction rate, which ranges from approximately 0 to 0.0016. Each point represents average signal for that year, connected with a line to show the trend. This chart shows that expansionary language increased steadily from 2015 to 2018 which means the economics is likely to be in the good conditions as the FOMC statement is more optimistic. After that, it declined slightly in 2019, and then dropped sharply in 2020, marked by a vertical dashed line indicating the COVID-19 shock. After 2020, the signal gradually rises again through 2023, which suggest that the FOMC become somewhat more expansionary after the pendamic.
 
+[***4.3.When did the FOMC statement use good vs bad economic terms the most or the least?***]{.underline}
+
+Similarly, I create patterns for positive economic language about growth, inflation, and employment, and separate patterns for negative language about inflation, growth, and labor market weakness. These expressions capture both single words and multi-word phrases, which gives a more realistic measure of tone.Then I again use str_count() to count how often positive and negative economic phrases appear in each statement. I convert these counts into rates per word to compare statements fairly across years. This will helps show whether the Fed’s communication became more negative during COVID and more positive afterward.
 ```{r}
 good_growth <- "\\b(strong|solid|robust|resilient|improv(ing|ed)|expand(ing|ed)|growth|gains?)\\b"
 good_infla <- "\\b(inflation (has )?(eased|moderated|declined|fallen|decreased)|disinflation|price pressures (have )?(eased|moderated))\\b"
@@ -187,6 +195,7 @@ bad_empl <-"\\b(unemployment (has )?(increased|risen)|job losses|layoffs|employm
 ```
 
 ```{r}
+#| results: 'hide'
 fed_goodbad <- fed2 |>
   mutate(
     good_n = str_count(text_clean, good_growth) +
@@ -203,6 +212,7 @@ fed_goodbad <- fed2 |>
 ```
 
 ```{r}
+#| results: 'hide'
 year_goodbad <- fed_goodbad |>
   group_by(year) |>
   summarise(
@@ -212,7 +222,10 @@ year_goodbad <- fed_goodbad |>
   )
 ```
 
-```{r}
+```{r fig.cap = "Figure 3. shows good vs bad economic terms in FOMC statement by year.Positive economic language dominates most years, while negative language increases during the COVID-19 shock (2020–2021), reflecting the economic disruption caused by the pandemic."}
+#| results: 'hide'
+ #| fig-width: 5
+#| fig-height: 3
 year_long <- year_goodbad |>
   pivot_longer(cols = c(good_rate, bad_rate),
                names_to = "tone",
@@ -224,55 +237,35 @@ year_long <- year_goodbad |>
 ggplot(year_long, aes(x = factor(year), y = rate, fill = tone)) +
   geom_col(position = "dodge") +
   labs(
-    title = "Good vs Bad Economic Language in FOMC Statements by Year",
+    title = "Good vs Bad Economic terms in FOMC Statements by Year",
+    caption = "Data source:(https://www.federalreserve.gov/monetarypolicy/fomc.htm)",
     x = "Year",
-    y = "Mentions per Word",
-    fill = NULL
+    y = "Rate of Mentions per Word",
+    fill = "Terms"
   )
 ```
+This is a side-by-side bar chart comparing the frequency of good vs bad economics terms used in the FOMC statement by year. The x axis represents Year, ranging from 2015 to 2023. The y axis represent the rate of mention per words, ranging approximately from 0 to 0.038.For each year, two bars are displayed side by side, red bar indicates bad term(such as slowed, weakened, or increased inflation), while the light blue bar indicates good terms(such as strong, growth, or improving). The chart suggests that for most of the years, good economic terms appears more frequently than bad terms which means that the Federal Reserve generally communicates an optimistic or stable outlook for the economy. However,the frequency of bad economic terms increases slightly around 2020–2021, reflecting more negative economic discussion during the COVID-19 period.After 2021,the frequency of negative terms declines again while positive terms remain relatively strong which shows that the communication tone of the Federal Reserve become more positive as the economic condition starts to recover. 
 
 [***4.4 What are sentiment words that FOMC statement mention, how did it change by years?***]{.underline}
 
-```{r}
-get_stopwords() |> print(n = 50)   
-get_stopwords(source = "smart") |> print(n = 50)   
-
-
-smart_stopwords <- get_stopwords(source = "smart")
-```
+I used get_sentiments("bing") to classify words as positive or negative which allows me to identify which sentiment words appeared most often and how the tone changed across years.I then use the inner_join() matches words from the FOMC statements to the Bing sentiment lexicon, and count() shows which positive and negative words are most frequent. The figure will adds detail to the earlier tone analysis by showing exactly how FOMC language changed during the COVID period.
 
 ```{r}
-get_sentiments(lexicon = "afinn")
-get_sentiments(lexicon = "nrc")
+#| results: 'hide'
+
 get_sentiments(lexicon = "bing")
 
 bing_sentiments <- get_sentiments(lexicon = "bing")
 ```
 
-```{r}
-fed_words|>
- inner_join(bing_sentiments) |>
-  count(sentiment)|>
 
-```
-
-```{r}
-fed_words|>
- inner_join(bing_sentiments) |>
-  count(sentiment, word, sort = TRUE) |>
-  group_by(sentiment) |>
-  slice_max(n, n = 10) |>
-  ungroup() |>
-  ggplot(aes(x = fct_reorder(word, n), y = n, fill = sentiment)) +
-    geom_col() +  
-    coord_flip() +
-    facet_wrap(~ sentiment, scales = "free")
-```
-
-```{r}
+```{r fig.cap = "Figure 4. shows most frequent positive and negative sentiment words in FOMC statements by year.In 2020 and 2021, negative words such as risks, virus, and challenging appear more frequently, reflecting the economic uncertainty during the COVID-19 pandemic. At the samw time, positive words like support and progress emphasize policy support and economic recovery." }
+#| results: 'hide'
+ #| fig-width: 5
+#| fig-height: 3
 sent_year_words <- fed_words |>
 filter(year %in% c( 2019, 2020, 2021, 2022 ))|>
-  inner_join(bing, by = "word") |>
+  inner_join(bing_sentiments, by = "word") |>
   count(year, sentiment, word, sort = TRUE) |>
   group_by(year, sentiment) |>
   slice_max(n, n = 5, with_ties = FALSE) |>
@@ -284,9 +277,17 @@ ggplot(sent_year_words, aes(x = fct_reorder(word, n), y = n, fill = sentiment)) 
   facet_grid(sentiment ~ year, scales = "free") +
   labs(
     title = "Most Frequent Sentiment Words in FOMC Statements by Year",
-    x = NULL,
-    y = "Word Count"
+    x = "Sentiment Words",
+    y = " Word Count"
   )
 ```
 
+This is a faceted horizontal bar chart showing the most positive and negative sentiment words in the FOMC statement for selected year. X axis represents word count, ranging from 0 to around 12 mentions.The y axis represents the lists of sentiments words identified in the each statements. The charts divided into panel by year (2019-2022) and sentiment category ( negative and positive),with each bar representing how often a specific word appears in that year’s statements. In the figure, negative words such as "Risk", "Virus", "impede" appear increasingly in 2020 and 2021 which is during COVID shock, indicating that there is economic uncertainty during this period.In 2022, negative terms such as “risks” and “debt” remain relatively frequent, indicating that concerns about economic challenges persisted even as recovery began.At the same time, positive words such as " support", "progress", "strong" still continue to appear often, which shows that the Fed is trying to emphasize policy to maintain economic stability.
+
+# Conclusion
+
+The analysis shows that the Federal Reserve's communication has shifted during the Pandemic period. Base on the statements, expansionary language decline sharply in 2020 because the Fed mentioned words like "Slow" " Decline" more often during that time. Negative economic terms such as “inflation increase”,  “job loses” have higher mentioned rate, while negative words such as " risk","virus"," challenging"   reflecting the economic uncertainty caused by COVID-19.At the same time, positive terms such as “support,” “progress,” and “strong” continued to appear, emphasizing the Federal Reserve’s role in stabilizing the economy. The result suggests that FOMC statements adjust their tone to reflect changing economic conditions while also  focus on policy support and economic stability. 
+
 # Reference
+[^1]: Federal Reserve. “The Fed - Federal Open Market Committee.” Board of Governors of the Federal Reserve System,<https://www.federalreserve.gov/monetarypolicy/fomc.htm.> Accessed 5 Mar. 2026
+[^2]: ---. “The Fed - Meeting Calendars and Information.” Board of Governors of the Federal Reserve System,<https://www.federalreserve.gov/monetarypolicy/fomc.htm.> Accessed 2 Mar. 2026.
