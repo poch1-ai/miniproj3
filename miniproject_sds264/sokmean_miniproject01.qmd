@@ -19,7 +19,7 @@ In this project I will use text analysis to **examine how the language in FOMC s
 
 # 2. Data
 
-In this project I will be using the data from the FOMC statements[^2] from 2015 to 2023. There are 36 observations and 5 columns containing the period, date, year, month, and full text of the statement. Because FOMC statements are released regularly and follow a similar structure, they provide a useful source for analyzing how the Federal Reserve communicates changes in economic conditions over time.
+In this project I will be using the data from the FOMC statements from 2015 to 2023. There are 36 observations and 5 columns containing the period, date, year, month, and full text of the statement. Because FOMC statements are released regularly and follow a similar structure, they provide a useful source for analyzing how the Federal Reserve communicates changes in economic conditions over time.
 
 ```{r}
 #| include: false
@@ -289,5 +289,4 @@ This is a faceted horizontal bar chart showing the most positive and negative se
 The analysis shows that the Federal Reserve's communication has shifted during the Pandemic period. Base on the statements, expansionary language decline sharply in 2020 because the Fed mentioned words like "Slow" " Decline" more often during that time. Negative economic terms such as “inflation increase”,  “job loses” have higher mentioned rate, while negative words such as " risk","virus"," challenging"   reflecting the economic uncertainty caused by COVID-19.At the same time, positive terms such as “support,” “progress,” and “strong” continued to appear, emphasizing the Federal Reserve’s role in stabilizing the economy. The result suggests that FOMC statements adjust their tone to reflect changing economic conditions while also  focus on policy support and economic stability. 
 
 # Reference
-[^1]: Federal Reserve. “The Fed - Federal Open Market Committee.” Board of Governors of the Federal Reserve System,<https://www.federalreserve.gov/monetarypolicy/fomc.htm.> Accessed 5 Mar. 2026
-[^2]: ---. “The Fed - Meeting Calendars and Information.” Board of Governors of the Federal Reserve System,<https://www.federalreserve.gov/monetarypolicy/fomc.htm.> Accessed 2 Mar. 2026.
+[^1]: ---. “The Fed - Meeting Calendars and Information.” Board of Governors of the Federal Reserve System,<https://www.federalreserve.gov/monetarypolicy/fomc.htm.> Accessed 2 Mar. 2026.
