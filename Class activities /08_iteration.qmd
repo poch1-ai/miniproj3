@@ -748,3 +748,68 @@ p_value < .05   # if TRUE, then we reject the null hypothesis and conclude
 #   result in p-values below .05)
 
 ```
+
+```{r}
+set.seed(123)  # for reproducibility
+
+n <- 45
+num_samples <- 10000
+true_mean <- 25
+true_sd <- 4
+
+# store results (TRUE/FALSE if CI contains 25)
+contains_mean <- rep(FALSE, num_samples)
+
+for (i in 1:num_samples) {
+  
+  # take sample
+  sample_data <- rnorm(n, mean = true_mean, sd = true_sd)
+  
+  # sample stats
+  xbar <- mean(sample_data)
+  s <- sd(sample_data)
+  
+  # confidence interval
+  lower <- xbar - 1.96 * (s / sqrt(n))
+  upper <- xbar + 1.96 * (s / sqrt(n))
+  
+  # check if true mean is inside
+  contains_mean[i] <- (lower <= true_mean) & (true_mean <= upper)
+}
+
+# proportion of intervals that contain 25
+mean(contains_mean)
+```
+
+```{r}
+set.seed(123)  # for reproducibility
+
+n <- 45
+num_samples <- 10000
+true_mean <- 25
+true_sd <- 4
+
+# store results (TRUE/FALSE if CI contains 25)
+contains_mean <- rep(FALSE, num_samples)
+
+for (i in 1:num_samples) {
+  
+  # take sample
+  sample_data <- rnorm(n, mean = true_mean, sd = true_sd)
+  
+  # sample stats
+  xbar <- mean(sample_data)
+  s <- sd(sample_data)
+  
+  # confidence interval
+  lower <- xbar - 1.96 * (s / sqrt(n))
+  upper <- xbar + 1.96 * (s / sqrt(n))
+  
+  # check if true mean is inside
+  contains_mean[i] <- (lower <= true_mean) & (true_mean <= upper)
+}
+
+# proportion of intervals that contain 25
+mean(contains_mean)
+```
+
