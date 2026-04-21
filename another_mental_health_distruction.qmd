@@ -1,0 +1,312 @@
+---
+title: "another_mental_health_distruction "
+format: html
+---
+loading parkage
+
+```{r}
+# Load the packages needed for data cleaning, web requests,
+# Census data access, and JSON handling
+library(tidyverse)
+library(stringr)
+library(httr)
+library(polite)
+library(tidycensus)
+library(dplyr)
+library(jsonlite)
+```
+
+**We would like to analyse with this data set the relationship between people’s political views/affiliation across different regions of the country (Midwest, East Coast, etc), and the type of charitable/political organizations they donate to frequently.** 
+
+In this file we're going to extract data from the Census.gov website based on state and region in order too merge with the cps_data.
+
+First check if the website allow us to scrape
+```{r}
+# Check whether scraping is allowed on these websites
+robotstxt::paths_allowed("https://api.census.gov/data/2023/cps/volunteer/sep")
+robotstxt::paths_allowed("https://catalog.data.gov")
+
+# create data dictionary
+dir.create("data", showWarnings = FALSE)
+
+
+```
+
+Second: We will create the region base on tidy census
+```{r}
+
+# Use the built-in fips_codes dataset from tidycensus
+# Keep only the state information we need and remove duplicates 
+us_states_level <- fips_codes |> 
+  select(state, state_code, state_name) |> 
+  distinct() |>
+  mutate(
+  
+    region = case_when(
+      state_code %in% c("09", "23", "25", "33", "44", "50") ~ "Northeast",  # CT, ME, MA, NH, RI, VT
+      state_code %in% c("34", "36", "42") ~ "Northeast",  # NJ, NY, PA
+      state_code %in% c("17", "18", "26", "39", "55") ~ "Midwest",  # IL, IN, MI, OH, WI
+      state_code %in% c("19", "20", "27", "29", "31", "38", "46") ~ "Midwest",  # IA, KS, MN, MO, NE, ND, SD
+      state_code %in% c("10", "11", "12", "13", "24", "37", "45", "51", "54") ~ "South",  # DE, DC, FL, GA, MD, NC, SC, VA, WV
+      state_code %in% c("01", "05", "21", "22", "28", "47") ~ "South",  # AL, AR, KY, LA, MS, TN
+      state_code %in% c("40", "48") ~ "South",  # OK, TX
+      state_code %in% c("04", "08", "16", "30", "32", "35", "49") ~ "West",  # AZ, CO, ID, MT, NV, NM, UT
+      state_code %in% c("02", "06", "15", "41", "53", "56") ~ "West",  # AK, CA, HI, OR, WA, WY
+      TRUE ~ NA_character_
+    )
+  )
+us_states_level
+```
+
+Now we will create the donation and vlunteer data from census data 
+```{r}
+ # To see if our new key is listed 
+usethis::edit_r_environ("project")
+census_api_key <- Sys.getenv("CENSUS_API_KEY")
+print(census_api_key) # see if it works
+```
+
+Since all the variables are in special codes and it is confusing, we're trying to create a tibble to see what all the variables mean using this url for variable directory(https://api.census.gov/data/2023/cps/volunteer/sep/variables.json) and it is there on the list when you click (https://api.census.gov/data/2023/cps/volunteer/sep)
+```{r}
+# Get all variable names
+vars_meta1 <- fromJSON("https://api.census.gov/data/2023/cps/volunteer/sep/variables.json")
+var_names <- names(vars_meta1$variables) 
+var_lookup1 <- tibble(
+  variable = var_names,
+  label = map_chr(vars_meta1$variables, ~ .x$label %||% NA_character_)
+)
+var_lookup1
+```
+
+Here are the variable we found these variables and what are these variables code mean using this link as a guide ( https://www2.census.gov/programs-surveys/cps/techdocs/cpssep23.pdf)
+- State = GESTFIPS
+- Age = PRTAGE ( 0-79 age in year, 80 as for 80-84 and 85 for 85+)
+- Gender = PESEX ( 1 for male and 2 for female)
+- Race = PTDTRACE ( 1 = "White",2 = "Black/African American",3 = "American Indian/Alaska Native",4 = "Asian only",5 = "Hawaiian/Pacific Islander Only",6 = "White-Black",7 = "White-AI",8 = "White-Asian",9 = "White-HP")
+- Donate to non-political org = PES18 (-9 No answer, -3 Refusal,-2 Do not know,-1 Not in universe,1 Yes,2 No )
+- Donate to political org = PES17 (-9 No answer, -3 Refusal,-2 Do not know,-1 Not in universe,1 Yes,2 No)
+-How often volunteer = PES16D ( -9 No answer,-3 Refusal,-2 Do not know,-1 Not in universe,1 Basically every   day,2 A few times a week, 3 A few times a month,4 Once a month,5 Less than once a month,6 Not at all)
+-Volunteer status = PRSUPVOL (-1 not in universe,1 Volunteer, 2 Not a volunteer)
+-Hour volunteer = PTS16E (-9 No answer,-3 Refused,-2 Don't know,-1 Not in universe)
+-Volunteer in children activities = PES16A (-9 No answer,-3 Refused,-2 Don't know,-1 Not in universe)
+
+ get the url from census, then create table
+
+```{r}
+usethis::edit_r_environ("project")
+census_api_key <- Sys.getenv("CENSUS_API_KEY")
+
+# Get URL that includes all of the variables we need
+main_url <- str_c(
+  "https://api.census.gov/data/2023/cps/volunteer/sep",
+  "?get=GESTFIPS,PRTAGE,PESEX,PTDTRACE,PES18,PES17,PES16D,PRSUPVOL,PTS16E,PES16A",
+  "&key=", census_api_key
+)
+
+census_data3 <- GET(main_url)
+
+if (status_code(census_data3) != 200) {
+  stop("API request failed with status: ", status_code(census_data3))
+}
+
+details <- content(census_data3, as = "text", encoding = "UTF-8") |>
+  jsonlite::fromJSON()
+
+details[[1]]   
+details[[2]]
+
+GESTFIPS <- character()
+PRTAGE <- double()
+PESEX <- double()
+PTDTRACE <- double()
+PES18 <- double()
+PES17 <- double()
+PES16D <- double()
+PRSUPVOL <- double()
+PTS16E <- double()
+PES16A <- double()
+
+for(i in 2:length(details)) {
+  GESTFIPS[i-1] <- details[[i]][[1]][1]
+  PRTAGE[i-1] <- details[[i]][[2]][1]
+  PESEX[i-1] <- details[[i]][[3]][1]
+  PTDTRACE[i-1] <- details[[i]][[4]][1]
+  PES18[i-1] <- details[[i]][[5]][1]
+  PES17[i-1] <- details[[i]][[6]][1]
+  PES16D[i-1] <- details[[i]][[7]][1]
+  PRSUPVOL[i-1] <- details[[i]][[8]][1]
+  PTS16E[i-1] <- details[[i]][[9]][1]
+  PES16A[i-1] <- details[[i]][[10]][1]
+}
+
+census_data3 <- tibble(
+  state_code = GESTFIPS,
+  age = as.numeric(PRTAGE),
+  gender = as.numeric(PESEX),
+  race_code = as.numeric(PTDTRACE),
+  donate_nonpolitical_org = as.numeric(PES18),
+  donate_political_org = as.numeric(PES17),
+  volunteer_freq = as.numeric(PES16D),
+  volunteer_status = as.numeric(PRSUPVOL),
+  hours_volunteered = as.numeric(PTS16E),
+  vol_children_activities = as.numeric(PES16A)
+)
+
+census_data3
+```
+
+```{r}
+usethis::edit_r_environ("project")
+census_api_key <- Sys.getenv("CENSUS_API_KEY")
+print(census_api_key)
+url <- str_c(
+  "https://api.census.gov/data/2023/cps/volunteer/sep",
+  "?get=GESTFIPS,PRTAGE,PESEX,PTDTRACE,PES18,PES17,PES16D,PRSUPVOL,PTS16E,PES16A",
+  "&key=", census_api_key
+)
+
+census_data1 <- GET(url)
+details <- content(census_data1, "parsed")
+
+details[[1]]   
+details[[2]]   
+
+GESTFIPS <- character()
+PRTAGE <- double()
+PESEX <- double()
+PTDTRACE <- double()
+PES18 <- double()
+PES17 <- double()
+PES16D <- double()
+PRSUPVOL <- double()
+PTS16E <- double()
+PES16A <- double()
+# Creating for loop using api class activity 
+for(i in 2:length(details)) {
+  GESTFIPS[i-1] <- details[[i]][[1]][1]
+  PRTAGE[i-1] <- details[[i]][[2]][1]
+  PESEX[i-1] <- details[[i]][[3]][1]
+  PTDTRACE[i-1] <- details[[i]][[4]][1]
+  PES18[i-1] <- details[[i]][[5]][1]
+  PES17[i-1] <- details[[i]][[6]][1]
+  PES16D[i-1] <- details[[i]][[7]][1]
+  PRSUPVOL[i-1] <- details[[i]][[8]][1]
+  PTS16E[i-1] <- details[[i]][[9]][1]
+  PES16A[i-1] <- details[[i]][[10]][1]
+}
+
+census_data1 <- tibble(
+  state_code = GESTFIPS,
+  age = parse_number(PRTAGE),
+  gender = parse_number(PESEX),
+  race_code = parse_number(PTDTRACE),
+  donate_nonpolitical_org = parse_number(PES18),
+  donate_political_org = parse_number(PES17),
+  volunteer_freq = parse_number(PES16D),
+  volunteer_status = parse_number(PRSUPVOL),
+  hours_volunteered = parse_number(PTS16E),
+  vol_children_activities = parse_number(PES16A)
+)
+
+census_data1
+```
+
+```{r}
+```
+
+
+```{r}
+usethis::edit_r_environ("project")
+census_api_key <- Sys.getenv("CENSUS_API_KEY")
+print(census_api_key)
+url <- str_c(
+  "https://api.census.gov/data/2023/cps/volunteer/sep",
+  "?get=GESTFIPS,PRTAGE,PESEX,PTDTRACE,PES18,PES17,PES16D,PRSUPVOL,PTS16E,PES16A",
+  "&key=", census_api_key
+)
+
+census_data1 <- GET(url)
+details <- content(census_data1, "parsed")
+
+details[[1]]   
+details[[2]]   
+
+GESTFIPS <- character()
+PRTAGE <- double()
+PESEX <- double()
+PTDTRACE <- double()
+PES18 <- double()
+PES17 <- double()
+PES16D <- double()
+PRSUPVOL <- double()
+PTS16E <- double()
+PES16A <- double()
+# Creating for loop using api class activity 
+for(i in 2:length(details)) {
+  GESTFIPS[i-1] <- details[[i]][[1]][1]
+  PRTAGE[i-1] <- details[[i]][[2]][1]
+  PESEX[i-1] <- details[[i]][[3]][1]
+  PTDTRACE[i-1] <- details[[i]][[4]][1]
+  PES18[i-1] <- details[[i]][[5]][1]
+  PES17[i-1] <- details[[i]][[6]][1]
+  PES16D[i-1] <- details[[i]][[7]][1]
+  PRSUPVOL[i-1] <- details[[i]][[8]][1]
+  PTS16E[i-1] <- details[[i]][[9]][1]
+  PES16A[i-1] <- details[[i]][[10]][1]
+}
+
+census_data1 <- tibble(
+  state_code = GESTFIPS,
+  age = parse_number(PRTAGE),
+  gender = parse_number(PESEX),
+  race_code = parse_number(PTDTRACE),
+  donate_nonpolitical_org = parse_number(PES18),
+  donate_political_org = parse_number(PES17),
+  volunteer_freq = parse_number(PES16D),
+  volunteer_status = parse_number(PRSUPVOL),
+  hours_volunteered = parse_number(PTS16E),
+  vol_children_activities = parse_number(PES16A)
+)
+
+census_data1
+```
+
+```{r}
+census_data1 <- census_data1 |>
+  mutate(
+    
+    gender = recode(gender,
+                    `1` = "Male",
+                    `2` = "Female",
+                    .default = "Unknown"),
+    race_code = recode(race_code,
+                       `1` = "White",
+                       `2` = "Black/African American",
+                       `3` = "American Indian/Alaska Native",
+                       `4` = "Chinese",
+                       `5` = "Japanese",
+                       `6` = "Other Asian/Pacific Islander",
+                       `7` = "Other race",
+                       `8` = "Two major races",
+                       `9` = "Three or more races",
+                       .default = "Unknown"),
+    volunteer_status = recode(volunteer_status, 
+                              `-1` = "Not in universe",
+                               `1` = "Volunteer",
+                               `2` = " Volunteer"),
+    hours_volunteered = recode(hours_volunteered, 
+                              `-9`= "No answer", 
+                               `3`= "Refused",
+                               `2`= "Don't know", 
+                              `-1`= "Not in universe")
+    
+  )
+```
+
+
+```{r}
+
+```
+
+
+

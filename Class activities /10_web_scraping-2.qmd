@@ -166,12 +166,20 @@ nih_title <- scrape(session) |>
 nih_title
 ```
 
+4 step 
+Using polite parkage using the scrape, bow 
+1. Check if the scraping is allowed usng robotxt:: paths_allowed
+2. Red HTMl, convert it into XML 
+3. Identify nodes using html_nodes()
+4. Covert to a tibble, using html_text(), html_table()
 
 ## On Your Own: 
 
 1. Finishing the NIH example
 
 a) Repeat the process above to extract the description (which include the publication date and the abstract):
+
+
 
 ```{r}
 session <- bow("https://www.nih.gov/news-events/news-releases", force = TRUE)
@@ -229,7 +237,7 @@ scrape_page <- function(url) {
   Sys.sleep(2)
   session <- bow(url, force = TRUE)
   page <- scrape(session)
-  nih_title <- get_text_from_page(** FILL IN **)
+  nih_title <- get_text_from_page(page, ".thumbnail-teaser_heading")
   nih_description <- get_text_from_page(** FILL IN **)
   tibble(title = nih_title, description = nih_description) |>
     mutate(
@@ -249,9 +257,9 @@ d) Use a for loop over the first 5 pages by filling in code where asked:
 #| eval: FALSE
 
 pages <- vector("list", length = 5)
-for (i in ** FILL IN **) {
+for (i in 0:4) {
   url <- str_c("https://www.nih.gov/news-events/news-releases?page=", i)
-  pages[[i + 1]] <- ** FILL IN **
+  pages[[i + 1]] <- scrape_page(url)
 }
 
 df_articles <- bind_rows(pages)
@@ -265,10 +273,10 @@ e) Instead, form a final data set by using map functions in the purrr package:
 #| eval: FALSE
 
 # Create a character vector of URLs for the first 5 pages
-base_url <- "** FILL IN ***"
+base_url <- "https://www.nih.gov/news-events/news-releases?page="
 urls_all_pages <- str_c(base_url, 0:4)
 
-pages2 <- purrr::map(** FILL IN **)
+pages2 <- purrr::map(urls_all_pages, scrape_page)
 df_articles2 <- bind_rows(pages2)
 df_articles2
 ```
@@ -282,9 +290,91 @@ df_articles2
 - minimum income required for a single person to live comfortably
 - average monthly rent for a 2-bedroom apartment
 - the "about" paragraph (the very first paragraph above "Location Details")
+```{r}
+# check that scraping is allowed (Step 0)
+robotstxt::paths_allowed("https://www.bestplaces.net/city/minnesota/minneapolis")
+
+# Step 1: Download the HTML and turn it into an XML file with read_html()
+best_places <- read_html("https://www.bestplaces.net/city/minnesota/minneapolis")
+
+# Step 2: Extract specific nodes with html_nodes()
+crime_temp <- html_nodes(best_places, ".col-4 > div:nth-child(1)")
+crime_temp
+
+# Step 3: Extract content from nodes with html_text()
+#   Usually will still need to do some stringr adjustments
+crime <- html_text(crime_temp) |>
+  str_remove(" // 100")
+parse_number(crime)
+
+
+scrape_bestplaces <- function(state, city){
+  url <- str_c("https://www.bestplaces.net/city/", state, "/", city, sep = "")
+
+session <- bow(url, force = TRUE)
+
+crime <- scrape(session) |>
+  html_nodes(".col-4 > div:nth-child(1)") |>
+  html_text() |>
+  str_remove(" // 100") |>
+  parse_number()
+crime
+
+min_income_single <- scrape(session) |>
+  html_nodes(".text-center+ .text-center div:nth-child(1)") |>
+  html_text() |>
+  parse_number()
+min_income_single
+
+rent_2br <- scrape(session) |>
+  html_nodes(".col-3~ .col-3+ .col-3 .mb-2") |>
+  html_text() |>
+  parse_number()
+rent_2br
+
+about <- scrape(session) |>
+  html_nodes(".ms-3:nth-child(3)") |>
+  html_text() 
+about
+
+tibble(state = state,
+       city = city,
+       crime = crime,
+       min_income_single,
+       rent_2br,
+       about)
+}
+
+```
 
 
 3. Write a function called `scrape_bestplaces()` with arguments for `state` and `city`.  When you run, for example, `scrape_bestplaces("minnesota", "minneapolis")`, the output should be a 1 x 6 tibble with columns for `state`, `city`, `crime`, `min_income_single`, `rent_2br`, and `about`.
 
 
 4. Create a 5 x 6 tibble by running `scrape_bestplaces()` 5 times with 5 cities you are interested in.  You might have to combine tibbles using `bind_rows()`.  Be sure you look at the URL at bestplaces.net for the various cities to make sure it works as you expect.  For bonus points, create the same 5 x 6 tibble for the same 5 cities using `purrr:map2`!
+```{r}
+city_data <- bind_rows(scrape_bestplaces("minnesota", "minneapolis"),
+                       scrape_bestplaces("illinois", "chicago"),
+                       scrape_bestplaces("washington", "seattle"),
+                       scrape_bestplaces("texas", "austin"),
+                       scrape_bestplaces("massachusetts", "boston"))
+city_data
+
+# Or use purrr::map2
+
+# Create a character vector of states and cities
+state_vec <- c("minnesota", 
+               "illinois",
+               "washington",
+               "texas",
+               "massachusetts")
+city_vec <- c("minneapolis",
+              "chicago",
+              "seattle",
+              "austin",
+              "boston")
+
+city_data2 <- purrr::map2(state_vec, city_vec, scrape_bestplaces)
+bind_rows(city_data2)
+```
+

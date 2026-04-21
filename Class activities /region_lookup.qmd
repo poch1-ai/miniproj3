@@ -1,0 +1,30 @@
+---
+title: "example"
+format: html
+---
+
+```{r}
+library(tidyverse)
+library(stringr)
+library(httr)
+```
+
+```{r}
+base_url <- "https://api.census.gov/data/2023/cps/volunteer/sep"
+```
+
+```{r}
+vars <- "PEAGE,PESEX,PTDTRACE,PEVOLUNT"
+```
+
+```{r}
+library(tidyverse)
+library(stringr)
+library(httr)
+
+
+
+```{r}
+
+```
+
