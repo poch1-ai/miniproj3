@@ -1,0 +1,172 @@
+---
+title: "shiny"
+output: html_document
+date: "2026-04-21"
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(shiny)
+```
+
+
+This R Markdown document is made interactive using Shiny. Unlike the more traditional workflow of creating static reports, you can now create documents that allow your readers to change the assumptions underlying your analysis and see the results immediately. 
+
+To learn more, see [Interactive Documents](http://rmarkdown.rstudio.com/authoring_shiny.html).
+
+## Inputs and Outputs
+
+You can embed Shiny inputs and outputs in your document. Outputs are automatically updated whenever inputs change.  This demonstrates how a standard R plot can be made interactive by wrapping it in the Shiny `renderPlot` function. The `selectInput` and `sliderInput` functions create the input widgets used to drive the plot.
+
+```{r eruptions, echo=FALSE}
+inputPanel(
+  selectInput("n_breaks", label = "Number of bins:",
+              choices = c(10, 20, 35, 50), selected = 20),
+  
+  sliderInput("bw_adjust", label = "Bandwidth adjustment:",
+              min = 0.2, max = 2, value = 1, step = 0.2)
+)
+
+renderPlot({
+  hist(faithful$eruptions, probability = TRUE, breaks = as.numeric(input$n_breaks),
+       xlab = "Duration (minutes)", main = "Geyser eruption duration")
+  
+  dens <- density(faithful$eruptions, adjust = input$bw_adjust)
+  lines(dens, col = "blue")
+})
+```
+
+## Embedded Application
+
+It's also possible to embed an entire Shiny application within an R Markdown document using the `shinyAppDir` function. This example embeds a Shiny application located in another directory:
+
+```{r tabsets, echo=FALSE}
+shinyAppDir(
+  system.file("examples/06_tabsets", package = "shiny"),
+  options = list(
+    width = "100%", height = 550
+  )
+)
+```
+
+Note the use of the `height` parameter to determine how much vertical space the embedded application should occupy.
+
+You can also use the `shinyApp` function to define an application inline rather then in an external directory.
+
+In all of R code chunks above the `echo = FALSE` attribute is used. This is to prevent the R code within the chunk from rendering in the document alongside the Shiny components.
+
+Instructions for Creating Shiny App in Rmarkdown
+
+a) Click "File" > "New File" > "R Markdown" (Note: Quarto has just recently implemented some of its capabilities for interactive apps, including dashboards, so in 264 we will use Rmarkdown files for stability and also for consistency with past projects that you might want to learn from.)
+
+b) On Left side, select "Shiny." You may want to update the Title, but leave the other options as they are. Click "OK".
+
+c) Delete the "Embedded Application" section at the end.
+
+d) Save the resulting file as "first_Shiny.Rmd".
+
+e) Carefully examine the code, including the use of "echo = FALSE" to prevent R code from appearing in the Shiny app.
+
+f) Hit "Run Document" to see the app.  Now you are running a Shiny app through Rmarkdown!
+
+
+### Group exercise I:
+
+1. Create a second interactive histogram which recreates the 1st histogram (old faithful eruption) as closely as possible using ggplot.
+
+- Hint 1: write ggplot code that works, and then "shiny-ize" it
+
+- Hint 2: Use `aes(y = after_stat(density))` in the histogram to make histogram and density use same y-axis.  
+
+- Hint 3: Give your input variables different names than in the first histogram.
+
+2. Modify the input panel choices for number of bins and bandwidth.
+Also change the default/starting input for both bins and bandwidth.
+```{r}
+inputPanel(
+  selectInput("n_breaks_ggplot", label = "Number of bins (ggplot):",
+              choices = c(10, 20, 35, 50), selected = 35),
+  
+  sliderInput("bw_adjust_ggplot", label = "Bandwidth adjustment (ggplot):",
+              min = 0.2, max = 2, value = 0.6, step = 0.2)
+)
+
+renderPlot({
+  library(ggplot2)
+  
+  p <- ggplot(faithful, aes(x = eruptions)) +
+    geom_histogram(aes(y = after_stat(density)), 
+                   bins = as.numeric(input$n_breaks_ggplot),
+                   fill = "blue",
+                   color = "red",
+                   alpha = 0.7) +
+    labs(x = "Duration (minutes)", 
+         y = "Density")
+  
+  # Add density line
+  dens <- density(faithful$eruptions, adjust = input$bw_adjust_ggplot)
+  dens_df <- data.frame(x = dens$x, y = dens$y)
+  p <- p + geom_line(data = dens_df, aes(x = x, y = y), color = "green", linewidth = 1)
+  
+  print(p)
+})
+```
+
+
+-------------------------------------------------------------------------
+
+### Part 2:
+
+See how a few more input features can be used in `AER_Shiny.Rmd`, which uses the medical expenditure data set `NMES1988`
+
+a) Save this file, then hit "Run Document" to see a few new features (note that you can't simply run individual R chunks in an Rmd meant to produce a Shiny app)
+
+b) Note how a Yes/No check box can be integrated with `if` and `else if`
+
+c) Note how user-input variables for ggplot attributes can be integrated with `.data[[.]]`.  In some of the sample code from past projects, you may see `aes_string()` used instead of `.data[[.]]`.  `aes_string()` still works, but it was recently deprecated so it will no longer be supported in the tidyverse.
+```{r}
+```
+
+
+### Group exercise II:
+
+3. Create a new shiny app! Use a dataset from class that's built into R (e.g., flights, diamonds, ames, NMES1988,...) and create an interactive graph.  (Hint: you can see all of the built-in R data sets available to you from the packages currently loaded by running `data()`)
+
+```{r}
+
+
+```
+
+4. You might try having multiple inputs, or examining the Shiny CheatSheet Input Options (https://www.rstudio.com/resources/cheatsheets/) and using an input we haven't discussed yet.
+
+5. Create multiple shiny apps using your dataset and turn them into a flexdashboard. Check out [this website on using flexdashboard](https://pkgs.rstudio.com/flexdashboard/articles/using.html) for more information on how to organize layout, use multiple pages, change themes, and make your app more adaptable for mobile devices.
+
+---------------------------------------------------------------
+
+
+### Links to other Rmd files we will use to produce interactive apps
+
+Remember to hit the Download Raw File button in each case.
+
+- [13a_AER_Shiny.Rmd](https://github.com/joeroith/264_spring_2026/blob/main/more_shiny/13a_AER_Shiny.Rmd)
+
+- [13b_first_Shiny_flexdash.Rmd](https://github.com/joeroith/264_spring_2026/blob/main/more_shiny/13b_first_Shiny_flexdash.Rmd)
+
+
+We will also use these folders as well.  You can copy the URL for the folder into the textbox at [download-directory.github.io](download-directory.github.io), hit Enter, and you'll have a zipped version of the folder.
+
+- [AER_app](https://github.com/joeroith/264_spring_2026/blob/main/AERapp)
+
+- [Ames example](https://github.com/joeroith/264_spring_2026/blob/main/Ames_example)
+
+Check out my (old school) Shiny app developed from a CIR project a few years ago:
+
+- [Click here](https://jroith.shinyapps.io/Ponds_Plot_Dashboard/)
+
+Check out Prof. Roback's Flexdashboard Shiny app on Ames Housing:
+
+- [Click here](https://proback.shinyapps.io/ProfR_Shiny_flexdashboard/)
+
+
+

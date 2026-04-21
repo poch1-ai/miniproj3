@@ -117,8 +117,8 @@ print(omdb_api_key)  # see if it works
 ```{r}
 usethis::edit_r_environ("project")
 Sys.getenv()
-project_key <- Sys.getenv("PROJECT_KEY")
-print(project_key)
+omdb_api_key <- Sys.getenv("OMDB_KEY")
+print(omdb_api_key)
 
 
 
