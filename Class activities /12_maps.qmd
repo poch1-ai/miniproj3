@@ -1,7 +1,7 @@
 ---
 title: "Creating informative maps"
 format:
-  pdf: default
+  html: default
 editor_options: 
   chunk_output_type: console
 ---
@@ -84,7 +84,7 @@ us_states |>
 ```
 
 **[Pause to ponder:]** What might the `group` and `order` columns represent?
-*Group tells R which point belong to the same shape, not just state but also subregion as well. 'order' looks like it ranks the latitude from highest to lowest. Oreder is also about what drawing order within that shape*
+grup is not just states but also sub region 
 
 Other maps provided by the `maps` package include US counties, France, Italy, New Zealand, and two different views of the world. If you want maps of other countries or regions, you can often find them online.
 
@@ -116,7 +116,7 @@ us_states |>
 ```
 
 **[Pause to ponder:]** What did we learn by running `anti_join()` above?
-*Shows the mismatched of datasets ( the first data set is New york and the second one is New york state for example)*
+
 
 Notice that the `us_states` map also includes only the contiguous 48 states. [This](https://r-spatial.org/r/2018/10/25/ggplot2-sf-3.html) gives an example of creating really beautiful map insets for Alaska and Hawaii.
 
@@ -167,12 +167,11 @@ vacc_mar13 |>
   ggplot(mapping = aes(x = long, y = lat,
                           group = group)) + 
   geom_polygon(aes(fill = Governor), color = "darkgrey", linewidth = 0.2) + 
-  labs(fill = "Governor") + # this is where it changes
+  labs(fill = "Governor") +
   coord_map() + 
   theme_void() +  
   scale_fill_manual(values = c("blue", "red")) #<1> #manually fill blue and red 
 ```
-
 
 1. You can change the fill scale for different color schemes.
 
@@ -187,6 +186,7 @@ You can still use data viz tools from Data Science 1 (like faceting) to create t
 ```{r}
 #| message: false
 #| warning: false
+install.packages("viridis") 
 library(viridis)
 library(lubridate)
 weekly_vacc <- vaccines |>
@@ -214,7 +214,7 @@ weekly_vacc |>
 ```
 
 **[Pause to ponder:]** are we bothered by the warning about many-to-many when you run the code above?
-*Not really. the map data has many rows per state becayse each states is made of many boundary points.The weekly summary has one row per state-week. So after the join, each state-week value gets repeated across all the polygon points for that state. That is expected for map drawing.*
+There are serveral state in a week?
 
 ### Other cool state maps
 
@@ -238,7 +238,7 @@ vacc_mar13 |>
 
 
 **[Pause to ponder:]** Why might one use a map like above instead of our previous choropleth maps?
-*Better comparison and might also because they all have the same square size* 
+
 
 I used [this example](https://livefreeordichotomize.com/2021/04/07/nytimes-map-how-to/) to create the code above.  The original graph is located [here](https://www.nytimes.com/interactive/2021/04/06/us/variants-cases-spread.html).
 
@@ -250,7 +250,6 @@ To add even more power and value to your plots, we can add interactivity.  For n
 For instance, here is a really simple plot with a pop-up window:
 
 ```{r}
-#| eval: FALSE 
 library(leaflet)
 
 leaflet() |> 
@@ -276,7 +275,6 @@ airbnb.df <- read_csv("https://joeroith.github.io/264_spring_2026/Data/airbnbDat
 ```
 
 ```{r}
-#| eval: FALSE 
 leaflet() |>
     addTiles() |>
     setView(lng = mean(airbnb.df$Long), lat = mean(airbnb.df$Lat), 
@@ -293,10 +291,8 @@ leaflet() |>
 ```
 
 **[Pause to ponder:]** List similarities and differences between leaflet plots and ggplots.
-*Static = map ggplot, each boarder point gets its own row, long dataset , cannot use this to make interactive plot*
-*interactive - leaflet, sf, can uses these to make static plot* 
-*- ggplot2 is for static plots, and slo often uses plain coordinate columns or sf* 
-*- Leaflet is for interactive, useful for zooming, clicking ect*
+Static = map ggplot, each boarder point gets its own row, long dataset , cannot use this to make interactive plot
+interactive - leaflet, sf, can uses these to make static plot 
 
 
 ### Interactive choropleth maps with leaflet
@@ -327,11 +323,10 @@ Note also that the authors of this example have already merged state population 
 First we'll start with a static plot using a simple features object and geom_sf():
 
 ```{r}
-#| eval: FALSE 
 # Create density bins as on the webpage
 state_plotting_sf <- states |>
-  mutate(density_intervals = cut(density, n = 8,  # cut(density..) bins population density into interval 
-          breaks = c(0, 10, 20, 50, 100, 200, 500, 1000, Inf))) |> #beak() how you want to cut up density
+  mutate(density_intervals = cut(density, n = 8,
+          breaks = c(0, 10, 20, 50, 100, 200, 500, 1000, Inf))) |> #beak() how you want to cut up desity
   filter(!(name %in% c("Alaska", "Hawaii", "Puerto Rico")))
 
 ggplot(data = state_plotting_sf) + 
@@ -344,7 +339,6 @@ ggplot(data = state_plotting_sf) +
 Now let's use `leaflet` to create an interactive plot!
 
 ```{r}
-#| eval: FALSE 
 #| warning: false
 
 # Create our own category bins for population densities
@@ -425,71 +419,6 @@ density_data <- density_table |>
   select(-Location)
 
 density_data
-
-# merge with the shapefile 
-state1 <- read_sf("https://rstudio.github.io/leaflet/json/us-states.geojson") |>
-  select(name, geometry)|>
-  mutate(state_name = str_to_lower(name))
-density_map_sf <- state1 |>
-  left_join(density_data, by = "state_name")|>
-  filter(!(name %in% c( "Alaska", " Hawaii", "Puerto Rico")))
-
-# Now I want to check 
-density_map_sf |>
-  st_drop_geometry() |>
-  count()
-```
-
-```{r}
-#| eval: FALSE 
-# Making interactive map 
-# Create color bins
-bins <- c(0, 10, 25, 50, 100, 250, 500, 1000, Inf)
-pal <- colorBin("YlOrRd", domain = density_map_sf$Density, bins = bins)
-
-# Create hover labels
-labels <- density_map_sf |>
-  mutate(
-    label_text = str_c(
-      "<strong>", name, "</strong><br/>",
-      "Density: ", round(Density, 1), " people / sq mile<br/>",
-      "Population: ", scales::comma(Population), "<br/>",
-      "Land area: ", scales::comma(Land_area), " sq mi"
-    )
-  ) |>
-  pull(label_text) |>
-  lapply(HTML)
-
-leaflet(density_map_sf) |>
-  addTiles() |>
-  setView(-96, 37.8, 4) |>
-  addPolygons(
-    fillColor = ~pal(Density),
-    weight = 1,
-    color = "black",
-    opacity = 1,
-    fillOpacity = 0.8,
-    highlightOptions = highlightOptions(
-      weight = 3,
-      color = "#888",
-      bringToFront = TRUE
-    ),
-    label = labels,
-    labelOptions = labelOptions(
-      direction = "auto",
-      textsize = "14px",
-      style = list("font-weight" = "normal", padding = "3px 8px")
-    )
-  ) |>
-  addLegend(
-    pal = pal,
-    values = ~Density,
-    opacity = 0.8,
-    title = "Population density",
-    position = "bottomright"
-  )
-
-
 ```
 
 
@@ -505,8 +434,6 @@ Here's some R code and hints to get you going:
 
 # Get info to draw US states for geom_polygon (connect the lat-long points)
 library(maps)
-library(poliscidata)
-
 states_polygon <- as_tibble(map_data("state")) |>
   select(region, group, order, lat, long)
 
@@ -549,29 +476,7 @@ R code hints:
 ```{r}
 # Make sure all keys have the same format before joining:
 #   all lower case, no internal or external spaces
- polisci_data1 <- polisci_data |>
-  mutate(
-    state_key = state |>
-      str_squish() |>
-      str_to_lower() |>
-      str_replace_all(" ", "")
-  )
 
-states_polygon1 <- states_polygon |>
-  mutate(
-    state_key = region |>
-      str_squish() |>
-      str_to_lower() |>
-      str_replace_all(" ", "")
-  )
-
-states_sf1 <- states_sf |>
-  mutate(
-    state_key = name |>
-      str_squish() |>
-      str_to_lower() |>
-      str_replace_all(" ", "")
-  )
 ```
 
 ```{r}
@@ -580,75 +485,27 @@ states_sf1 <- states_sf |>
 
 # Merge with states_polygon (static)
 
-states_static <- states_polygon1 |>
-  left_join(polisci_data1, by = "state_key") |>
-  filter(!(region %in% c( "Alaska", " Hawaii", "Puerto Rico")))
 # Check that merge worked for 48 contiguous states
-states_static |>
-  distinct(region)|>
-  count()
+
 
 # Merge with states_sf (static or interactive)
-states_interactive <-states_sf1 |>
-  left_join(polisci_data1, by = "state_key") |>
-  filter(!( name %in% c("Alaska", " Hawaii", " Puerto Rico")))
+
 # Check that merge worked for 48 contiguous states
-states_interactive |>
-  st_drop_geometry()|>
-  count()
+
 ```
 
 
 Numeric variable (static plot):
 
 ```{r}
-ggplot(states_static, aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = carfatal07), color = "white", linewidth = 0.2) +
-  coord_map() +
-  theme_void() +
-  scale_fill_viridis_c(na.value = "grey90") +
-  labs(fill = "Car fatalities\n(2007)",
-       title = "Motor vehicle fatality rates by state")
+
 ```
 
 
 Numeric variable (interactive plot):
 
 ```{r}
-#| eval: FALSE 
 # it's okay to skip a legend here
-pal_num <- colorNumeric(
-  palette = "viridis",
-  domain = states_interactive$carfatal07,
-  na.color = "grey90"
-)
-
-labels_num <- states_interactive |>
-  mutate(
-    label_text = str_c(
-      "<strong>", name, "</strong><br/>",
-      "Car fatalities (2007): ", round(carfatal07, 2)
-    )
-  ) |>
-  pull(label_text) |>
-  lapply(HTML)
-
-leaflet(states_interactive) |>
-  addTiles() |>
-  setView(-96, 37.8, 4) |>
-  addPolygons(
-    fillColor = ~pal_num(carfatal07),
-    weight = 1,
-    color = "white",
-    opacity = 1,
-    fillOpacity = 0.8,
-    label = labels_num,
-    highlightOptions = highlightOptions(
-      weight = 3,
-      color = "#666",
-      bringToFront = TRUE
-    )
-  ) 
 ```
 
 
@@ -656,69 +513,13 @@ Categorical variable (static plot):
 
 ```{r}
 # be really careful with matching color order to factor level order
-states_interactive |>
-  st_drop_geometry() |>
-  count(cook_index3)
-# Make factor levels explicit so color order stays consistent
-states_static <- states_static |>
-  mutate(cook_index3 = factor(cook_index3))
-
-ggplot(states_static, aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = cook_index3), color = "black", linewidth = 0.2) +
-  coord_map() +
-  theme_void() +
-  scale_fill_brewer(palette = "RdBu", na.value = "grey90") +
-  labs(fill = "Cook index",
-       title = "State partisan leaning")
 ```
 
 
 Categorical variable (interactive plot):
 
 ```{r}
-#| eval: FALSE 
 # may use colorFactor() here
-states_interactive <- states_interactive |>
-  mutate(cook_index3 = factor(cook_index3))
-
-pal_cat <- colorFactor(
-  palette = "RdBu",
-  domain = states_interactive$cook_index3,
-  na.color = "grey90"
-)
-
-labels_cat <- states_interactive |>
-  mutate(
-    label_text = str_c(
-      "<strong>", name, "</strong><br/>",
-      "Cook index: ", cook_index3
-    )
-  ) |>
-  pull(label_text) |>
-  lapply(HTML)
-
-leaflet(states_interactive) |>
-  addTiles() |>
-  setView(-96, 37.8, 4) |>
-  addPolygons(
-    fillColor = ~pal_cat(cook_index3),
-    weight = 1,
-    color = "white",
-    opacity = 1,
-    fillOpacity = 0.8,
-    label = labels_cat,
-    highlightOptions = highlightOptions(
-      weight = 3,
-      color = "#111",
-      bringToFront = TRUE
-    )
-  ) |>
-  addLegend(
-    pal = pal_cat,
-    values = ~cook_index3,
-    title = "Cook index",
-    position = "bottomright"
-  )
 ```
 
 
