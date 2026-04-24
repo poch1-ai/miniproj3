@@ -189,7 +189,7 @@ for(i in 2:length(details)) {
   PTDTRACE[i-1] <- details[[i]][[4]][1]
   PES18[i-1] <- details[[i]][[5]][1]
   PES17[i-1] <- details[[i]][[6]][1]
-  PES16D[i-1] <- details[[i]][[7]][1]
+   PES16D[i-1] <- details[[i]][[7]][1]
   PRSUPVOL[i-1] <- details[[i]][[8]][1]
   PTS16E[i-1] <- details[[i]][[9]][1]
   PES16A[i-1] <- details[[i]][[10]][1]

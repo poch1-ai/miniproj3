@@ -70,7 +70,7 @@ e) Carefully examine the code, including the use of "echo = FALSE" to prevent R 
 
 f) Hit "Run Document" to see the app.  Now you are running a Shiny app through Rmarkdown!
 
-
+- the layout or control can be mor e challenging 
 ### Group exercise I:
 
 1. Create a second interactive histogram which recreates the 1st histogram (old faithful eruption) as closely as possible using ggplot.
@@ -80,12 +80,15 @@ f) Hit "Run Document" to see the app.  Now you are running a Shiny app through R
 - Hint 2: Use `aes(y = after_stat(density))` in the histogram to make histogram and density use same y-axis.  
 
 - Hint 3: Give your input variables different names than in the first histogram.
+inputpanel 
+rederplot 
+
 
 2. Modify the input panel choices for number of bins and bandwidth.
 Also change the default/starting input for both bins and bandwidth.
 ```{r}
 inputPanel(
-  selectInput("n_breaks_ggplot", label = "Number of bins (ggplot):",
+  selectInput("n_breaks_ggplot", label = "Number of bins (ggplot):", 
               choices = c(10, 20, 35, 50), selected = 35),
   
   sliderInput("bw_adjust_ggplot", label = "Bandwidth adjustment (ggplot):",

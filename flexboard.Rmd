@@ -1,0 +1,40 @@
+---
+title: "Flex dashboad "
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Chart A
+
+```{r}
+library(flexdashboard)
+library(readr)
+AmesHousing <- read_csv("Class activities /AmesHousing.csv")
+
+inputPanel(
+  sliderInput( inputId = "year",
+               lable = "Select a year"),
+  min = 1872, max = 2010, step =1, value =1960)
+)
+renderPlot( 
+  ggplot(AmesHousing, aes(x = input$year, y = Overall.Qual))  + 
+          geom_jitter()
+  )
+  
+```
+
+### Chart C
+
+```{r}
+
+```
+
